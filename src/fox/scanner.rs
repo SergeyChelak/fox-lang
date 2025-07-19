@@ -90,6 +90,7 @@ impl<'l> Scanner<'l> {
                 self.line += 1;
                 ScanData::Skip
             }
+            '\"' => self.advance_string()?,
             _ => {
                 return Err(Error::new(
                     ErrorKind::UnexpectedCharacter,
@@ -128,6 +129,26 @@ impl<'l> Scanner<'l> {
                 break;
             }
             _ = self.advance();
+        }
+    }
+
+    fn advance_string(&mut self) -> Result<ScanData, Error> {
+        loop {
+            let Some(ch) = self.advance() else {
+                return Err(Error::new(
+                    ErrorKind::UnterminatedString,
+                    Some(self.code_location()),
+                ));
+            };
+            if ch == '\n' {
+                self.line += 1;
+            }
+
+            if ch == '\"' {
+                let value = self.substring(self.start + 1, self.current - 1);
+                let data = self.scan_data_by_type_literal(TokenType::String, Object::String(value));
+                break Ok(data);
+            }
         }
     }
 
@@ -191,6 +212,21 @@ mod test {
         assert!(variant_eq(tokens[0].token_type, LeftParenthesis));
         assert!(variant_eq(tokens[1].token_type, RightParenthesis));
         assert!(variant_eq(tokens[2].token_type, Eof));
+    }
+
+    #[test]
+    fn test_string_parse() {
+        let input = "\"ABCDEF\"".chars().collect::<Vec<_>>();
+        let mut scanner = Scanner::with_source(&input);
+        let result = scanner.scan_tokens();
+        if let Err(err) = result {
+            panic!("Parse error: {:?}", err);
+        }
+        let token = &result.unwrap()[0];
+        let Object::String(value) = &token.literal else {
+            panic!("Invalid literal type");
+        };
+        assert_eq!(*value, "ABCDEF".to_string());
     }
 
     fn variant_eq<T>(first: T, second: T) -> bool {
