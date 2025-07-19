@@ -2,7 +2,7 @@ mod error;
 mod scanner;
 pub use error::*;
 
-type Source = [u8];
+type Source = [char];
 
 pub struct Token {
     token_type: TokenType,
@@ -20,6 +20,7 @@ impl Token {
 pub enum Object {
     Empty,
     Double(f32),
+    String(String),
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -70,6 +71,7 @@ pub enum TokenType {
     Eof,
 }
 
+#[derive(Debug)]
 pub struct CodeLocation {
     line: usize,
     abs_position: usize,

@@ -34,7 +34,7 @@ fn run_file<T: AsRef<str>>(path: T) -> io::Result<()> {
     Ok(())
 }
 
-fn run(code: &[u8]) {
+fn run(_code: &[u8]) {
     todo!()
 }
 
