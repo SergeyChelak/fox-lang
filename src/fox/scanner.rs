@@ -239,7 +239,7 @@ fn is_digit(value: Option<char>) -> bool {
 }
 
 fn is_alphanumeric(value: Option<char>) -> bool {
-    is_matches_criteria(value, |ch| ch.is_alphanumeric())
+    Some('_') == value || is_matches_criteria(value, |ch| ch.is_alphanumeric())
 }
 
 fn is_matches_criteria<F>(value: Option<char>, criteria: F) -> bool
@@ -357,7 +357,7 @@ mod test {
     #[test]
     fn test_identifier_parse() {
         let input =
-            "and class else false for fun if nil or print return super this true var while aaa bbb"
+            "and class else false for fun if nil or print return super this true var while aa_aa bbb"
                 .chars()
                 .collect::<Vec<_>>();
         let mut scanner = Scanner::with_source(&input);
