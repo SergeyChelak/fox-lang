@@ -79,7 +79,7 @@ impl<'l> Scanner<'l> {
             }
             '/' => {
                 if self.matches('/') {
-                    self.skip_to_eol();
+                    self.advance_to_eol();
                     ScanData::Skip
                 } else {
                     self.scan_data_by_type(Slash)
@@ -90,8 +90,9 @@ impl<'l> Scanner<'l> {
                 self.line += 1;
                 ScanData::Skip
             }
-            '\"' => self.advance_string()?,
-            '0'..='9' => self.advance_number()?,
+            '\"' => self.scan_string()?,
+            ch if ch.is_ascii_digit() => self.scan_number()?,
+            ch if ch.is_alphabetic() => self.scan_identifier()?,
             _ => {
                 return Err(Error::new(
                     ErrorKind::UnexpectedCharacter,
@@ -128,7 +129,7 @@ impl<'l> Scanner<'l> {
         true
     }
 
-    fn skip_to_eol(&mut self) {
+    fn advance_to_eol(&mut self) {
         while let Some(ch) = self.peek() {
             if ch == '\n' {
                 break;
@@ -137,7 +138,7 @@ impl<'l> Scanner<'l> {
         }
     }
 
-    fn advance_string(&mut self) -> Result<ScanData, Error> {
+    fn scan_string(&mut self) -> Result<ScanData, Error> {
         loop {
             let Some(ch) = self.advance() else {
                 return Err(Error::new(
@@ -157,10 +158,7 @@ impl<'l> Scanner<'l> {
         }
     }
 
-    fn advance_number(&mut self) -> Result<ScanData, Error> {
-        let is_digit =
-            |value: Option<char>| -> bool { value.map(|x| x.is_ascii_digit()).unwrap_or(false) };
-
+    fn scan_number(&mut self) -> Result<ScanData, Error> {
         while is_digit(self.peek()) {
             _ = self.advance();
         }
@@ -181,7 +179,35 @@ impl<'l> Scanner<'l> {
         Ok(data)
     }
 
-    // -----
+    fn scan_identifier(&mut self) -> Result<ScanData, Error> {
+        while is_alphanumeric(self.peek()) {
+            _ = self.advance();
+        }
+        let value = self.substring(self.start, self.current);
+        use TokenType::*;
+        let t_type = match value.as_str() {
+            "and" => And,
+            "class" => Class,
+            "else" => Else,
+            "false" => False,
+            "for" => For,
+            "fun" => Fun,
+            "if" => If,
+            "nil" => Nil,
+            "or" => Or,
+            "print" => Print,
+            "return" => Return,
+            "super" => Super,
+            "this" => This,
+            "true" => True,
+            "var" => Var,
+            "while" => While,
+            _ => Identifier,
+        };
+        let data = self.scan_data_by_type(t_type);
+        Ok(data)
+    }
+
     fn scan_data_by_type(&self, token_type: TokenType) -> ScanData {
         self.scan_data_by_type_literal(token_type, Object::Empty)
     }
@@ -189,10 +215,6 @@ impl<'l> Scanner<'l> {
     fn scan_data_by_type_literal(&self, token_type: TokenType, literal: Object) -> ScanData {
         ScanData::Token(self.token_with_literal(token_type, literal))
     }
-
-    // fn token(&self, token_type: TokenType) -> Token {
-    //     self.token_with_literal(token_type, Object::Empty)
-    // }
 
     fn token_with_literal(&self, token_type: TokenType, literal: Object) -> Token {
         let lexeme = if self.start < self.current {
@@ -218,6 +240,21 @@ impl<'l> Scanner<'l> {
     }
 }
 
+fn is_digit(value: Option<char>) -> bool {
+    is_matches_criteria(value, |ch| ch.is_ascii_digit())
+}
+
+fn is_alphanumeric(value: Option<char>) -> bool {
+    is_matches_criteria(value, |ch| ch.is_alphanumeric())
+}
+
+fn is_matches_criteria<F>(value: Option<char>, criteria: F) -> bool
+where
+    F: Fn(char) -> bool,
+{
+    value.map(criteria).unwrap_or(false)
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -232,15 +269,10 @@ mod test {
         .chars()
         .collect::<Vec<_>>();
         let mut scanner = Scanner::with_source(&input);
-        let result = scanner.scan_tokens();
-        if let Err(err) = result {
-            panic!("Parse error: {:?}", err);
-        }
-        let tokens = result.unwrap();
+        let result = scanner.scan_tokens().unwrap();
         use TokenType::*;
-        assert!(variant_eq(tokens[0].token_type, LeftParenthesis));
-        assert!(variant_eq(tokens[1].token_type, RightParenthesis));
-        assert!(variant_eq(tokens[2].token_type, Eof));
+        let expected = [LeftParenthesis, RightParenthesis, Eof];
+        assert!(is_token_types_matches(&result, &expected));
     }
 
     #[test]
@@ -286,6 +318,60 @@ mod test {
             panic!("Invalid literal type");
         };
         assert_eq!(*value, 123.456);
+    }
+
+    #[test]
+    fn test_token_parse() {
+        let input = "(){},.+-;*!!===<<=>>=/".chars().collect::<Vec<_>>();
+        let mut scanner = Scanner::with_source(&input);
+        let result = scanner.scan_tokens().unwrap();
+        use TokenType::*;
+        let expected = [
+            LeftParenthesis,
+            RightParenthesis,
+            LeftBrace,
+            RightBrace,
+            Comma,
+            Dot,
+            Plus,
+            Minus,
+            Semicolon,
+            Star,
+            Bang,
+            BangEqual,
+            EqualEqual,
+            Less,
+            LessEqual,
+            Greater,
+            GreaterEqual,
+            Slash,
+            Eof,
+        ];
+        assert!(is_token_types_matches(&result, &expected));
+    }
+
+    #[test]
+    fn test_identifier_parse() {
+        let input =
+            "and class else false for fun if nil or print return super this true var while aaa bbb"
+                .chars()
+                .collect::<Vec<_>>();
+        let mut scanner = Scanner::with_source(&input);
+        let result = scanner.scan_tokens().unwrap();
+        use TokenType::*;
+        let expected = [
+            And, Class, Else, False, For, Fun, If, Nil, Or, Print, Return, Super, This, True, Var,
+            While, Identifier, Identifier, Eof,
+        ];
+        assert!(is_token_types_matches(&result, &expected));
+    }
+
+    /// utils
+    fn is_token_types_matches(tokens: &[Token], t_types: &[TokenType]) -> bool {
+        tokens
+            .iter()
+            .zip(t_types.iter())
+            .all(|(token, tt)| variant_eq(token.token_type, *tt))
     }
 
     fn variant_eq<T>(first: T, second: T) -> bool {
