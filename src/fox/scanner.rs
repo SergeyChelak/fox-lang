@@ -92,7 +92,7 @@ impl<'l> Scanner<'l> {
             }
             '\"' => self.scan_string()?,
             ch if ch.is_ascii_digit() => self.scan_number()?,
-            ch if ch.is_alphabetic() => self.scan_identifier()?,
+            ch if ch.is_ascii_alphabetic() => self.scan_identifier()?,
             _ => {
                 return Err(self.error(ErrorKind::UnexpectedCharacter));
             }
@@ -239,7 +239,7 @@ fn is_digit(value: Option<char>) -> bool {
 }
 
 fn is_alphanumeric(value: Option<char>) -> bool {
-    Some('_') == value || is_matches_criteria(value, |ch| ch.is_alphanumeric())
+    Some('_') == value || is_matches_criteria(value, |ch| ch.is_ascii_alphanumeric())
 }
 
 fn is_matches_criteria<F>(value: Option<char>, criteria: F) -> bool
