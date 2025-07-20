@@ -91,6 +91,7 @@ impl<'l> Scanner<'l> {
                 ScanData::Skip
             }
             '\"' => self.advance_string()?,
+            '0'..='9' => self.advance_number()?,
             _ => {
                 return Err(Error::new(
                     ErrorKind::UnexpectedCharacter,
@@ -103,6 +104,10 @@ impl<'l> Scanner<'l> {
 
     fn peek(&self) -> Option<char> {
         self.source.get(self.current).cloned()
+    }
+
+    fn peek_next(&self) -> Option<char> {
+        self.source.get(self.current + 1).cloned()
     }
 
     fn advance(&mut self) -> Option<char> {
@@ -150,6 +155,30 @@ impl<'l> Scanner<'l> {
                 break Ok(data);
             }
         }
+    }
+
+    fn advance_number(&mut self) -> Result<ScanData, Error> {
+        let is_digit =
+            |value: Option<char>| -> bool { value.map(|x| x.is_ascii_digit()).unwrap_or(false) };
+
+        while is_digit(self.peek()) {
+            _ = self.advance();
+        }
+
+        if self.peek() == Some('.') && is_digit(self.peek_next()) {
+            _ = self.advance();
+        }
+
+        while is_digit(self.peek()) {
+            _ = self.advance();
+        }
+
+        let value = self.substring(self.start, self.current);
+        let double = value
+            .parse::<f32>()
+            .map_err(|_| Error::new(ErrorKind::UnexpectedCharacter, Some(self.code_location())))?;
+        let data = self.scan_data_by_type_literal(TokenType::Number, Object::Double(double));
+        Ok(data)
     }
 
     // -----
@@ -227,6 +256,36 @@ mod test {
             panic!("Invalid literal type");
         };
         assert_eq!(*value, "ABCDEF".to_string());
+    }
+
+    #[test]
+    fn test_int_parse() {
+        let input = "123".chars().collect::<Vec<_>>();
+        let mut scanner = Scanner::with_source(&input);
+        let result = scanner.scan_tokens();
+        if let Err(err) = result {
+            panic!("Parse error: {:?}", err);
+        }
+        let token = &result.unwrap()[0];
+        let Object::Double(value) = &token.literal else {
+            panic!("Invalid literal type");
+        };
+        assert_eq!(*value, 123.0);
+    }
+
+    #[test]
+    fn test_double_parse() {
+        let input = "123.456".chars().collect::<Vec<_>>();
+        let mut scanner = Scanner::with_source(&input);
+        let result = scanner.scan_tokens();
+        if let Err(err) = result {
+            panic!("Parse error: {:?}", err);
+        }
+        let token = &result.unwrap()[0];
+        let Object::Double(value) = &token.literal else {
+            panic!("Invalid literal type");
+        };
+        assert_eq!(*value, 123.456);
     }
 
     fn variant_eq<T>(first: T, second: T) -> bool {
