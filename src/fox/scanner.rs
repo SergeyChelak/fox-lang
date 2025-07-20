@@ -94,10 +94,7 @@ impl<'l> Scanner<'l> {
             ch if ch.is_ascii_digit() => self.scan_number()?,
             ch if ch.is_alphabetic() => self.scan_identifier()?,
             _ => {
-                return Err(Error::new(
-                    ErrorKind::UnexpectedCharacter,
-                    Some(self.code_location()),
-                ));
+                return Err(self.error(ErrorKind::UnexpectedCharacter));
             }
         };
         Ok(data)
@@ -141,10 +138,7 @@ impl<'l> Scanner<'l> {
     fn scan_string(&mut self) -> Result<ScanData, Error> {
         loop {
             let Some(ch) = self.advance() else {
-                return Err(Error::new(
-                    ErrorKind::UnterminatedString,
-                    Some(self.code_location()),
-                ));
+                return Err(self.error(ErrorKind::UnterminatedString));
             };
             if ch == '\n' {
                 self.line += 1;
@@ -174,7 +168,7 @@ impl<'l> Scanner<'l> {
         let value = self.substring(self.start, self.current);
         let double = value
             .parse::<f32>()
-            .map_err(|_| Error::new(ErrorKind::UnexpectedCharacter, Some(self.code_location())))?;
+            .map_err(|_| self.error(ErrorKind::UnexpectedCharacter))?;
         let data = self.scan_data_by_type_literal(TokenType::Number, Object::Double(double));
         Ok(data)
     }
@@ -229,6 +223,10 @@ impl<'l> Scanner<'l> {
             literal,
             code_location,
         }
+    }
+
+    fn error(&self, error_kind: ErrorKind) -> Error {
+        Error::new(error_kind, Some(self.code_location()))
     }
 
     fn code_location(&self) -> CodeLocation {
