@@ -115,15 +115,11 @@ impl<'l> Scanner<'l> {
     }
 
     fn matches(&mut self, value: char) -> bool {
-        let Some(ch) = self.peek() else {
-            return false;
+        if Some(value) == self.peek() {
+            self.current += 1;
+            return true;
         };
-
-        if ch != value {
-            return false;
-        }
-        self.current += 1;
-        true
+        false
     }
 
     fn advance_to_eol(&mut self) {
@@ -286,6 +282,16 @@ mod test {
             panic!("Invalid literal type");
         };
         assert_eq!(*value, "ABCDEF".to_string());
+    }
+
+    #[test]
+    fn test_not_terminated_string_parse() {
+        let input = "\"ABCDEF".chars().collect::<Vec<_>>();
+        let mut scanner = Scanner::with_source(&input);
+        let result = scanner.scan_tokens();
+        assert!(result.is_err());
+        let err = result.err().unwrap();
+        assert!(matches!(err.kind(), ErrorKind::UnterminatedString));
     }
 
     #[test]
