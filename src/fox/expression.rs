@@ -8,8 +8,9 @@ macro_rules! ast_expressions {
                     $(
                         $p_name:ident: $p_type:ty
                     ),*$(,)?
-                }) with $fn_visit:ident)
-            ,*
+                }) init: $fn_init:ident,
+                   visit: $fn_visit:ident
+            ),*
             $(,)?
         }
     ) => {
@@ -19,7 +20,7 @@ macro_rules! ast_expressions {
 
         impl $holder_type {
             $(
-                fn $option($($p_name: $p_type,)*) -> Self {
+                fn $fn_init($($p_name: $p_type,)*) -> Self {
                     Self::$option(
                         $option_data {
                             $($p_name,)*
@@ -62,33 +63,35 @@ ast_expressions!(
         Binary(
             BinaryData {
                 left: Box<Expression>,
-                right: Box<Expression>,
-                operator: Token
+                operator: Token,
+                right: Box<Expression>
             }
-        ) with visit_binary,
+        ) init: binary, visit: visit_binary,
 
         Grouping(
             GroupingData {
                 expression: Box<Expression>
             }
-        ) with visit_grouping,
+        ) init: grouping, visit: visit_grouping,
 
         Literal(
             LiteralData {
                 value: Object
             }
-        ) with visit_literal,
+        ) init: literal, visit: visit_literal,
 
         Unary(UnaryData {
                 expression: Box<Expression>,
                 operator: Token
             }
-        ) with visit_unary
+        ) init: unary, visit: visit_unary
     }
 );
 
 #[cfg(test)]
 mod test {
+    use crate::fox::TokenType;
+
     use super::*;
 
     struct AstPrinter {
@@ -96,34 +99,62 @@ mod test {
     }
 
     impl AstPrinter {
-        fn parenthesize(&self, name: &str, expressions: &[&Box<Expression>]) -> String {
-            todo!()
+        fn print(&self, expr: &Expression) -> Result<String, FoxError> {
+            expr.accept(self)
+        }
+
+        fn parenthesize(
+            &self,
+            name: &str,
+            expressions: &[&Box<Expression>],
+        ) -> Result<String, FoxError> {
+            let mut result = format!("({name}");
+
+            for expr in expressions {
+                let value = expr.accept(self)?;
+                result.push(' ');
+                result.push_str(&value);
+            }
+
+            result.push(')');
+            Ok(result)
         }
     }
 
     impl ExpressionVisitor<String> for AstPrinter {
         fn visit_binary(&self, data: &BinaryData) -> Result<String, FoxError> {
             let exprs = [&data.left, &data.right];
-            Ok(self.parenthesize(data.operator.lexeme.as_str(), &exprs))
+            Ok(self.parenthesize(data.operator.lexeme.as_str(), &exprs)?)
         }
 
         fn visit_grouping(&self, data: &GroupingData) -> Result<String, FoxError> {
-            Ok(self.parenthesize("groupng", &[&data.expression]))
+            Ok(self.parenthesize("group", &[&data.expression])?)
         }
 
         fn visit_literal(&self, data: &LiteralData) -> Result<String, FoxError> {
-            todo!()
+            Ok(format!("{}", data.value))
         }
 
         fn visit_unary(&self, data: &UnaryData) -> Result<String, FoxError> {
-            Ok(self.parenthesize(data.operator.lexeme.as_str(), &[&data.expression]))
+            Ok(self.parenthesize(data.operator.lexeme.as_str(), &[&data.expression])?)
         }
     }
 
     #[test]
     fn test_ast_printer() {
-        // let expr = Expression::Binary(
-        //     Expression::Unary(Expression::Literal(Object::Double(123.0)), operator)
-        // )
+        let expr = Expression::binary(
+            Box::new(Expression::unary(
+                Box::new(Expression::literal(Object::Double(123.0))),
+                Token::new(TokenType::Minus, "-", Object::Empty, Default::default()),
+            )),
+            Token::new(TokenType::Star, "*", Object::Empty, Default::default()),
+            Box::new(Expression::grouping(Box::new(Expression::literal(
+                Object::Double(45.67),
+            )))),
+        );
+
+        let printer = AstPrinter {};
+        let value = printer.print(&expr).unwrap();
+        assert_eq!("(* (- 123) (group 45.67))", value);
     }
 }
