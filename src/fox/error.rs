@@ -1,12 +1,12 @@
 use super::CodeLocation;
 
 #[derive(Debug)]
-pub struct Error {
+pub struct FoxError {
     kind: ErrorKind,
     info: ErrorInfo,
 }
 
-impl Error {
+impl FoxError {
     pub fn code(kind: ErrorKind, location: CodeLocation) -> Self {
         Self {
             kind,

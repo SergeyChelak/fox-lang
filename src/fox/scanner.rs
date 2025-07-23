@@ -1,4 +1,4 @@
-use super::{CodeLocation, Error, ErrorKind, Object, Source, Token, TokenType};
+use super::{CodeLocation, ErrorKind, FoxError, Object, Source, Token, TokenType};
 
 pub struct Scanner<'l> {
     start: usize,
@@ -22,7 +22,7 @@ impl<'l> Scanner<'l> {
         }
     }
 
-    pub fn scan_tokens(&mut self) -> Result<Vec<Token>, Error> {
+    pub fn scan_tokens(&mut self) -> Result<Vec<Token>, FoxError> {
         let mut tokens = Vec::<Token>::new();
         let mut is_eof = false;
         while !is_eof {
@@ -40,7 +40,7 @@ impl<'l> Scanner<'l> {
         Ok(tokens)
     }
 
-    fn scan_next(&mut self) -> Result<ScanData, Error> {
+    fn scan_next(&mut self) -> Result<ScanData, FoxError> {
         let Some(ch) = self.advance() else {
             return Ok(self.scan_data_by_type(Eof));
         };
@@ -131,7 +131,7 @@ impl<'l> Scanner<'l> {
         }
     }
 
-    fn scan_string(&mut self) -> Result<ScanData, Error> {
+    fn scan_string(&mut self) -> Result<ScanData, FoxError> {
         loop {
             let Some(ch) = self.advance() else {
                 return Err(self.error(ErrorKind::UnterminatedString));
@@ -148,7 +148,7 @@ impl<'l> Scanner<'l> {
         }
     }
 
-    fn scan_number(&mut self) -> Result<ScanData, Error> {
+    fn scan_number(&mut self) -> Result<ScanData, FoxError> {
         while is_digit(self.peek()) {
             _ = self.advance();
         }
@@ -169,7 +169,7 @@ impl<'l> Scanner<'l> {
         Ok(data)
     }
 
-    fn scan_identifier(&mut self) -> Result<ScanData, Error> {
+    fn scan_identifier(&mut self) -> Result<ScanData, FoxError> {
         while is_alphanumeric(self.peek()) {
             _ = self.advance();
         }
@@ -221,8 +221,8 @@ impl<'l> Scanner<'l> {
         }
     }
 
-    fn error(&self, error_kind: ErrorKind) -> Error {
-        Error::code(error_kind, self.code_location())
+    fn error(&self, error_kind: ErrorKind) -> FoxError {
+        FoxError::code(error_kind, self.code_location())
     }
 
     fn code_location(&self) -> CodeLocation {
