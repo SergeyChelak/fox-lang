@@ -36,5 +36,8 @@ pub enum ErrorInfo {
 pub enum ErrorKind {
     UnexpectedCharacter,
     UnterminatedString,
+    RightParenthesisExpected,
+    ExpressionExpected,
+    ExpectedOperator,
     InputOutput,
 }

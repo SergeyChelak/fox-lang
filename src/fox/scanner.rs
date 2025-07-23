@@ -110,7 +110,9 @@ impl<'l> Scanner<'l> {
 
     fn advance(&mut self) -> Option<char> {
         let value = self.peek();
-        self.current += 1;
+        if value.is_some() {
+            self.current += 1;
+        }
         value
     }
 
@@ -199,7 +201,7 @@ impl<'l> Scanner<'l> {
     }
 
     fn scan_data_by_type(&self, token_type: TokenType) -> ScanData {
-        self.scan_data_by_type_literal(token_type, Object::Empty)
+        self.scan_data_by_type_literal(token_type, Object::Nil)
     }
 
     fn scan_data_by_type_literal(&self, token_type: TokenType, literal: Object) -> ScanData {

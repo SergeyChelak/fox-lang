@@ -1,13 +1,17 @@
 mod error;
 mod expression;
+mod parser;
 mod scanner;
 use std::fmt::Display;
 
 pub use error::*;
+pub use expression::*;
+pub use parser::*;
 pub use scanner::*;
 
 pub type Source = [char];
 
+#[derive(Debug, Clone)]
 pub struct Token {
     token_type: TokenType,
     lexeme: String,
@@ -35,23 +39,26 @@ impl Token {
     }
 }
 
+#[derive(Debug, Clone)]
 pub enum Object {
-    Empty,
+    Nil,
     Double(f32),
     String(String),
+    Bool(bool),
 }
 
 impl Display for Object {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Empty => write!(f, "nil"),
+            Self::Nil => write!(f, "nil"),
             Self::Double(value) => write!(f, "{}", value),
             Self::String(value) => write!(f, "{}", value),
+            Self::Bool(value) => write!(f, "{}", value),
         }
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum TokenType {
     // single-character tokens
     LeftParenthesis,
