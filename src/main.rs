@@ -6,10 +6,17 @@ fn main() {
     let args = std::env::args().collect::<Vec<_>>();
     match args.len() {
         2 => {
-            _ = run_file(&args[1]);
+            let result = run_file(&args[1]);
+            if let Err(err) = result {
+                handle_error(&err);
+            }
         }
         _ => show_usage(),
     }
+}
+
+fn handle_error(error: &FoxError) {
+    println!("Error occurred {:?}", error);
 }
 
 fn run_file<T: AsRef<str>>(path: T) -> Result<(), FoxError> {

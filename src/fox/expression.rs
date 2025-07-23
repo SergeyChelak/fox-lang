@@ -100,6 +100,7 @@ impl AstPrinter {
         name: &str,
         expressions: &[&Box<Expression>],
     ) -> Result<String, FoxError> {
+        // assert!(!name.is_empty());
         let mut result = format!("({name}");
 
         for expr in expressions {
@@ -116,11 +117,11 @@ impl AstPrinter {
 impl ExpressionVisitor<String> for AstPrinter {
     fn visit_binary(&self, data: &BinaryData) -> Result<String, FoxError> {
         let exprs = [&data.left, &data.right];
-        Ok(self.parenthesize(data.operator.lexeme.as_str(), &exprs)?)
+        self.parenthesize(data.operator.lexeme.as_str(), &exprs)
     }
 
     fn visit_grouping(&self, data: &GroupingData) -> Result<String, FoxError> {
-        Ok(self.parenthesize("group", &[&data.expression])?)
+        self.parenthesize("group", &[&data.expression])
     }
 
     fn visit_literal(&self, data: &LiteralData) -> Result<String, FoxError> {
@@ -128,7 +129,7 @@ impl ExpressionVisitor<String> for AstPrinter {
     }
 
     fn visit_unary(&self, data: &UnaryData) -> Result<String, FoxError> {
-        Ok(self.parenthesize(data.operator.lexeme.as_str(), &[&data.expression])?)
+        self.parenthesize(data.operator.lexeme.as_str(), &[&data.expression])
     }
 }
 
