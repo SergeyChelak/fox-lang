@@ -3,19 +3,22 @@ use super::CodeLocation;
 #[derive(Debug)]
 pub struct Error {
     kind: ErrorKind,
-    code_location: Option<CodeLocation>,
+    info: ErrorInfo,
 }
 
 impl Error {
-    pub fn new(kind: ErrorKind, code_location: Option<CodeLocation>) -> Self {
+    pub fn code(kind: ErrorKind, location: CodeLocation) -> Self {
         Self {
             kind,
-            code_location,
+            info: ErrorInfo::Code(location),
         }
     }
 
-    pub fn error_kind(kind: ErrorKind) -> Self {
-        Self::new(kind, None)
+    pub fn error(kind: ErrorKind) -> Self {
+        Self {
+            kind,
+            info: ErrorInfo::Empty,
+        }
     }
 
     pub fn kind(&self) -> ErrorKind {
@@ -24,7 +27,14 @@ impl Error {
 }
 
 #[derive(Clone, Copy, Debug)]
+pub enum ErrorInfo {
+    Empty,
+    Code(CodeLocation),
+}
+
+#[derive(Clone, Copy, Debug)]
 pub enum ErrorKind {
     UnexpectedCharacter,
     UnterminatedString,
+    InputOutput,
 }

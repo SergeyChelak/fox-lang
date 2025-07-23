@@ -222,7 +222,7 @@ impl<'l> Scanner<'l> {
     }
 
     fn error(&self, error_kind: ErrorKind) -> Error {
-        Error::new(error_kind, Some(self.code_location()))
+        Error::code(error_kind, self.code_location())
     }
 
     fn code_location(&self) -> CodeLocation {

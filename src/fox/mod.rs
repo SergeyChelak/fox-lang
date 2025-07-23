@@ -1,8 +1,12 @@
 mod error;
+mod expression;
 mod scanner;
-pub use error::*;
+use std::fmt::Display;
 
-type Source = [char];
+pub use error::*;
+pub use scanner::*;
+
+pub type Source = [char];
 
 pub struct Token {
     token_type: TokenType,
@@ -21,6 +25,16 @@ pub enum Object {
     Empty,
     Double(f32),
     String(String),
+}
+
+impl Display for Object {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Empty => write!(f, "nil"),
+            Self::Double(value) => write!(f, "{}", value),
+            Self::String(value) => write!(f, "{}", value),
+        }
+    }
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -71,7 +85,7 @@ pub enum TokenType {
     Eof,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct CodeLocation {
     line: usize,
     abs_position: usize,

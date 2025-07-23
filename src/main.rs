@@ -1,13 +1,10 @@
 mod fox;
 
-use std::io::{self, Write};
+use crate::fox::{Error, Scanner, Source};
 
 fn main() {
     let args = std::env::args().collect::<Vec<_>>();
     match args.len() {
-        1 => {
-            _ = repl_mode();
-        }
         2 => {
             _ = run_file(&args[1]);
         }
@@ -15,37 +12,22 @@ fn main() {
     }
 }
 
-fn repl_mode() -> std::io::Result<()> {
-    println!("Fox language REPL. Ctrl+C to terminate");
-    let stdin = std::io::stdin();
-    loop {
-        print!(">");
-        std::io::stdout().flush()?;
-        let mut line = String::new();
-        stdin.read_line(&mut line)?;
-        run(&line.as_bytes())
-    }
-    // Ok(())
+fn run_file<T: AsRef<str>>(path: T) -> Result<(), Error> {
+    let data = std::fs::read_to_string(path.as_ref())
+        .map_err(|_| Error::error(fox::ErrorKind::InputOutput))?
+        .chars()
+        .collect::<Vec<_>>();
+    run(&data)
 }
 
-fn run_file<T: AsRef<str>>(path: T) -> io::Result<()> {
-    let data = read_file_as_bytes(path)?;
-    run(&data);
+fn run(source: &Source) -> Result<(), Error> {
+    let mut scanner = Scanner::with_source(source);
+    let tokens = scanner.scan_tokens()?;
+    println!("Scanned {} tokens", tokens.len());
     Ok(())
-}
-
-fn run(_code: &[u8]) {
-    todo!()
 }
 
 fn show_usage() {
     println!("Usage: fox-lang <script.fl>");
     // exit(0);
-}
-
-fn read_file_as_bytes<T: AsRef<str>>(path: T) -> io::Result<Vec<u8>> {
-    let mut file = std::fs::File::open(path.as_ref())?;
-    let mut buffer = Vec::new();
-    io::Read::read_to_end(&mut file, &mut buffer)?;
-    Ok(buffer)
 }
