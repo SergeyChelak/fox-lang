@@ -1,4 +1,7 @@
-use crate::fox::{FoxError, FoxResult, Object, TokenType, expression::Expression};
+use crate::fox::{
+    FoxError, FoxResult, Object, TokenType,
+    ast::{Expression, Statement},
+};
 
 use super::{ErrorKind, Token};
 
@@ -12,8 +15,44 @@ impl<'l> Parser<'l> {
         Self { tokens, current: 0 }
     }
 
-    pub fn parse(&mut self) -> FoxResult<Expression> {
-        self.expression()
+    pub fn parse(&mut self) -> FoxResult<Vec<Statement>> {
+        let mut statements = Vec::new();
+
+        while !self.is_at_end() {
+            let statement = self.statement()?;
+            statements.push(statement);
+        }
+
+        Ok(statements)
+    }
+
+    fn is_at_end(&self) -> bool {
+        // 1. We're expecting EOF is always last token in array according to design
+        // but because of robust reasons we also need to check if we still in token's range
+        // 2. Usage of peek() is less effective because it clones token each loop iteration
+        let Some(token) = self.tokens.get(self.current) else {
+            return true;
+        };
+        token.is_eof()
+    }
+
+    fn statement(&mut self) -> FoxResult<Statement> {
+        if self.matches(&[TokenType::Print]) {
+            return self.print_statement();
+        }
+        self.expression_statement()
+    }
+
+    fn print_statement(&mut self) -> FoxResult<Statement> {
+        let expr = self.expression()?;
+        self.consume_token(TokenType::Semicolon, ErrorKind::ExpectedSemicolon)?;
+        Ok(Statement::print(Box::new(expr)))
+    }
+
+    fn expression_statement(&mut self) -> FoxResult<Statement> {
+        let expr = self.expression()?;
+        self.consume_token(TokenType::Semicolon, ErrorKind::ExpectedSemicolon)?;
+        Ok(Statement::expression(Box::new(expr)))
     }
 
     fn expression(&mut self) -> FoxResult<Expression> {
@@ -41,7 +80,7 @@ impl<'l> Parser<'l> {
 
     fn equality(&mut self) -> FoxResult<Expression> {
         use TokenType::*;
-        self.parse_binary(Self::comparison, &[Bang, Equal])
+        self.parse_binary(Self::comparison, &[BangEqual, EqualEqual])
     }
 
     fn comparison(&mut self) -> FoxResult<Expression> {
@@ -129,8 +168,7 @@ impl<'l> Parser<'l> {
 
     fn force_previous_token(&self) -> FoxResult<Token> {
         let Some(token) = self.previous_token() else {
-            // TODO: provide code info from current token
-            return Err(FoxError::error(ErrorKind::ExpectedOperator));
+            return Err(self.error(ErrorKind::ExpectedOperator));
         };
         Ok(token)
     }

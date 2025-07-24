@@ -1,12 +1,11 @@
+mod ast;
 mod error;
-mod expression;
 mod interpreter;
 mod parser;
 mod scanner;
 mod token;
 
 pub use error::*;
-use expression::*;
 use parser::*;
 use scanner::*;
 use token::*;
@@ -28,16 +27,14 @@ impl Fox {
         let mut scanner = Scanner::with_source(&self.code);
         let tokens = scanner.scan_tokens()?;
 
+        // for token in tokens.iter() {
+        //     println!("{token:?}");
+        // }
+
         let mut parser = Parser::new(&tokens);
-        let expr = parser.parse()?;
+        let statements = parser.parse()?;
 
-        let value = AstPrinter.print(&expr)?;
-        println!("AST: {value}");
-
-        let object = Interpreter.evaluate(&expr)?;
-        println!("Result: {}", object);
-
-        Ok(())
+        Interpreter.interpret(&statements)
     }
 
     pub fn error_description(&self, error: &FoxError) -> String {

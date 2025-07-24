@@ -36,6 +36,16 @@ pub enum Object {
     Bool(bool),
 }
 
+impl Object {
+    pub fn is_true(&self) -> bool {
+        match self {
+            Object::Nil => false,
+            Object::Bool(value) => *value,
+            _ => true,
+        }
+    }
+}
+
 impl PartialEq for Object {
     fn eq(&self, other: &Self) -> bool {
         use Object::*;

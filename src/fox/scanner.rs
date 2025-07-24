@@ -210,9 +210,9 @@ impl<'l> Scanner<'l> {
 
     fn token_with_literal(&self, token_type: TokenType, literal: Object) -> Token {
         let lexeme = if self.start < self.current {
-            "".to_string()
-        } else {
             self.substring(self.start, self.current)
+        } else {
+            "".to_string()
         };
         let code_location = self.code_location();
         Token {

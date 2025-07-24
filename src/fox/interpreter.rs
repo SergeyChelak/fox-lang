@@ -1,12 +1,20 @@
-use crate::fox::{
-    BinaryData, ErrorKind, Expression, ExpressionVisitor, FoxError, FoxResult, GroupingData,
-    LiteralData, Object, TokenType, UnaryData,
-};
+use crate::fox::{ErrorKind, FoxError, FoxResult, Object, TokenType, ast::*};
 
 pub struct Interpreter;
 
 impl Interpreter {
-    pub fn evaluate(&self, expr: &Expression) -> FoxResult<Object> {
+    pub fn interpret(&self, statements: &[Statement]) -> FoxResult<()> {
+        for statement in statements {
+            self.execute(statement)?;
+        }
+        Ok(())
+    }
+
+    fn execute(&self, stmt: &Statement) -> FoxResult<()> {
+        stmt.accept(self)
+    }
+
+    fn evaluate(&self, expr: &Expression) -> FoxResult<Object> {
         expr.accept(self)
     }
 }
@@ -69,17 +77,22 @@ impl ExpressionVisitor<Object> for Interpreter {
                 ErrorKind::OperandMustBeNumber,
                 Some(data.operator.clone()),
             )),
-            (Bang, _) => Ok(Object::Bool(!is_true(&right))),
+            (Bang, r) => Ok(Object::Bool(!r.is_true())),
             _ => unreachable!(),
         }
     }
 }
 
-fn is_true(object: &Object) -> bool {
-    match object {
-        Object::Nil => false,
-        Object::Bool(value) => *value,
-        _ => true,
+impl StatementVisitor<()> for Interpreter {
+    fn visit_expression(&self, data: &ExpressionData) -> FoxResult<()> {
+        self.evaluate(&data.expression)?;
+        Ok(())
+    }
+
+    fn visit_print(&self, data: &PrintData) -> FoxResult<()> {
+        let value = self.evaluate(&data.expression)?;
+        println!("{value}");
+        Ok(())
     }
 }
 

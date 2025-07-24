@@ -1,6 +1,6 @@
 use crate::fox::{FoxResult, Object, Token};
 
-macro_rules! ast_expressions {
+macro_rules! define_ast {
     (
         $holder_type:ident accepting $visitor_type:ident {
             $(
@@ -58,7 +58,7 @@ macro_rules! ast_expressions {
     };
 }
 
-ast_expressions!(
+define_ast!(
     Expression accepting ExpressionVisitor {
         Binary(
             BinaryData {
@@ -88,6 +88,22 @@ ast_expressions!(
     }
 );
 
+define_ast!(
+    Statement accepting StatementVisitor {
+        Expression(
+            ExpressionData {
+                expression: Box<Expression>
+            }
+        ) init: expression, visit: visit_expression,
+
+        Print(
+            PrintData {
+                expression: Box<Expression>
+            }
+        ) init: print, visit: visit_print
+    }
+);
+
 pub struct AstPrinter;
 
 impl AstPrinter {
@@ -96,7 +112,6 @@ impl AstPrinter {
     }
 
     fn parenthesize(&self, name: &str, expressions: &[&Box<Expression>]) -> FoxResult<String> {
-        // assert!(!name.is_empty());
         let mut result = format!("({name}");
 
         for expr in expressions {

@@ -60,6 +60,7 @@ pub enum ErrorKind {
     RightParenthesisExpected,
     ExpressionExpected,
     ExpectedOperator,
+    ExpectedSemicolon,
     OperandMustBeNumber,
     OperandsMustBeSameType,
 }
@@ -73,6 +74,7 @@ impl Display for ErrorKind {
             RightParenthesisExpected => "Expect ')' after expression",
             ExpressionExpected => "Expect expression",
             ExpectedOperator => "Expect operator",
+            ExpectedSemicolon => "Expect ';' after expression",
             OperandMustBeNumber => "Operand must be a number",
             OperandsMustBeSameType => "Operands must be two numbers or two strings",
         };
