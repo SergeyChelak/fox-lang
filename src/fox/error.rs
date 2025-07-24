@@ -1,3 +1,7 @@
+use std::fmt::Display;
+
+use crate::fox::{Source, Token};
+
 use super::CodeLocation;
 
 pub type FoxResult<T> = Result<T, FoxError>;
@@ -9,10 +13,20 @@ pub struct FoxError {
 }
 
 impl FoxError {
-    pub fn code(kind: ErrorKind, location: CodeLocation) -> Self {
+    pub fn scanner(kind: ErrorKind, location: CodeLocation) -> Self {
         Self {
             kind,
             info: ErrorInfo::Code(location),
+        }
+    }
+
+    pub fn parser(kind: ErrorKind, token: Option<Token>) -> Self {
+        let Some(token) = token else {
+            return FoxError::error(kind);
+        };
+        Self {
+            kind,
+            info: ErrorInfo::Token(token),
         }
     }
 
@@ -26,12 +40,17 @@ impl FoxError {
     pub fn kind(&self) -> ErrorKind {
         self.kind
     }
+
+    pub fn info(&self) -> &ErrorInfo {
+        &self.info
+    }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub enum ErrorInfo {
     Empty,
     Code(CodeLocation),
+    Token(Token),
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -41,4 +60,115 @@ pub enum ErrorKind {
     RightParenthesisExpected,
     ExpressionExpected,
     ExpectedOperator,
+}
+
+impl Display for ErrorKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        use ErrorKind::*;
+        let text = match self {
+            UnexpectedCharacter => "Unexpected character",
+            UnterminatedString => "Unterminated string",
+            RightParenthesisExpected => "Expect ')' after expression",
+            ExpressionExpected => "Expect expression",
+            ExpectedOperator => "Expect operator",
+        };
+        write!(f, "{text}")
+    }
+}
+
+pub struct ErrorLine {
+    line_number: usize,
+    text: String,
+    position: usize,
+}
+
+impl ErrorLine {
+    pub fn with(code: &Source, location: &CodeLocation) -> Self {
+        let (position, text) = Self::line_with_error(code, location);
+
+        Self {
+            line_number: location.line_number(),
+            text,
+            position,
+        }
+    }
+
+    pub fn formatted(&self, message: &str) -> String {
+        let mut lines: Vec<String> = Vec::new();
+        let prefix = format!("{} |", self.line_number);
+        lines.push(format!("{}{}", prefix, self.text));
+
+        let arrow_idx = prefix.len() + self.position;
+        let fill = std::iter::repeat(' ').take(arrow_idx).collect::<String>();
+        lines.push(format!("{}▲", fill));
+
+        if !message.is_empty() {
+            let line = format!("{}└─ {}", fill, message);
+            lines.push(line)
+        }
+
+        lines.join("\n")
+    }
+
+    fn line_with_error(code: &Source, location: &CodeLocation) -> (usize, String) {
+        let mut left = location.absolute_position();
+        let mut right = left;
+
+        let is_terminator = |ch: char| -> bool { ch == '\n' || ch == '\r' };
+
+        let len = code.len();
+        let mut is_moving = true;
+        while is_moving {
+            is_moving = false;
+            if left > 0 {
+                if !is_terminator(code[left - 1]) {
+                    is_moving = true;
+                    left -= 1;
+                }
+            }
+
+            if right < len - 1 {
+                if !is_terminator(code[right + 1]) {
+                    is_moving = true;
+                    right += 1;
+                }
+            }
+        }
+
+        (
+            location.absolute_position() - left,
+            code[left..=right].iter().collect::<String>(),
+        )
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn fetch_line() {
+        let source = make_source();
+        let marker = 'X';
+        let position = source.iter().position(|x| *x == marker).unwrap();
+        let location = CodeLocation::new(3, position);
+
+        let el = ErrorLine::with(&source, &location);
+        assert_eq!("consume(X_RIGHT_PAREN);", el.text.trim());
+
+        let chars = el.text.chars().collect::<Vec<_>>();
+        assert_eq!(chars[el.position], marker);
+    }
+
+    fn make_source() -> Vec<char> {
+        r"
+            if (match(LEFT_PAREN)) {
+                  Expr expr = expression();
+                  consume(X_RIGHT_PAREN);
+                  return new Expr.Grouping(expr);
+            }
+        "
+        .chars()
+        .collect::<Vec<_>>()
+    }
 }

@@ -33,7 +33,20 @@ impl Fox {
         Ok(())
     }
 
-    pub fn error_description(&self, _error: &FoxError) -> String {
-        "Some error occurred".to_string()
+    pub fn error_description(&self, error: &FoxError) -> String {
+        let mut text = format!("{}", error.kind());
+
+        let location = match error.info() {
+            ErrorInfo::Empty => None,
+            ErrorInfo::Code(location) => Some(location),
+            ErrorInfo::Token(token) => Some(&token.code_location),
+        };
+
+        if let Some(location) = location {
+            let el = ErrorLine::with(&self.code, location);
+            text = el.formatted(&text);
+        }
+
+        text
     }
 }

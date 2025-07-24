@@ -178,11 +178,7 @@ impl<'l> Parser<'l> {
     }
 
     fn error(&self, error_kind: ErrorKind) -> FoxError {
-        if let Some(token) = self.peek() {
-            FoxError::code(error_kind, token.code_location)
-        } else {
-            FoxError::error(error_kind)
-        }
+        FoxError::parser(error_kind, self.peek())
     }
 
     fn check_type(&self, tt: &TokenType) -> bool {

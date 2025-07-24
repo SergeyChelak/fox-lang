@@ -105,6 +105,14 @@ impl CodeLocation {
     pub fn new(line: usize, abs_position: usize) -> Self {
         Self { line, abs_position }
     }
+
+    pub fn line_number(&self) -> usize {
+        self.line
+    }
+
+    pub fn absolute_position(&self) -> usize {
+        self.abs_position
+    }
 }
 
 impl Default for CodeLocation {

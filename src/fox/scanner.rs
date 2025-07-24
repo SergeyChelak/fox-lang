@@ -224,7 +224,7 @@ impl<'l> Scanner<'l> {
     }
 
     fn error(&self, error_kind: ErrorKind) -> FoxError {
-        FoxError::code(error_kind, self.code_location())
+        FoxError::scanner(error_kind, self.code_location())
     }
 
     fn code_location(&self) -> CodeLocation {
