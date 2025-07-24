@@ -41,5 +41,4 @@ pub enum ErrorKind {
     RightParenthesisExpected,
     ExpressionExpected,
     ExpectedOperator,
-    InputOutput,
 }

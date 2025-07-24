@@ -12,14 +12,28 @@ pub use token::*;
 
 pub type Source = [char];
 
-pub fn run(source: &Source) -> FoxResult<()> {
-    let mut scanner = Scanner::with_source(source);
-    let tokens = scanner.scan_tokens()?;
+pub struct Fox {
+    code: Vec<char>,
+}
 
-    let mut parser = Parser::new(&tokens);
-    let expr = parser.parse()?;
+impl Fox {
+    pub fn with(code: Vec<char>) -> Self {
+        Self { code }
+    }
 
-    let value = AstPrinter.print(&expr)?;
-    println!("AST: {}", value);
-    Ok(())
+    pub fn run(&self) -> FoxResult<()> {
+        let mut scanner = Scanner::with_source(&self.code);
+        let tokens = scanner.scan_tokens()?;
+
+        let mut parser = Parser::new(&tokens);
+        let expr = parser.parse()?;
+
+        let value = AstPrinter.print(&expr)?;
+        println!("AST: {}", value);
+        Ok(())
+    }
+
+    pub fn error_description(&self, _error: &FoxError) -> String {
+        "Some error occurred".to_string()
+    }
 }
