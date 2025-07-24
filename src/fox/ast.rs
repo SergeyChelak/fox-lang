@@ -60,12 +60,12 @@ macro_rules! define_ast {
 
 define_ast!(
     Expression accepting ExpressionVisitor {
-        // Assign(
-        //     AssignExpr {
-        //         name: Token,
-        //         value: Box<Expression>,
-        //     }
-        // ) init: assign, visit: visit_assign,
+        Assign(
+            AssignExpr {
+                name: Token,
+                value: Box<Expression>,
+            }
+        ) init: assign, visit: visit_assign,
 
         Binary(
             BinaryExpr {
@@ -186,6 +186,10 @@ mod test {
         }
 
         fn visit_variable(&mut self, _data: &VariableExpr) -> FoxResult<String> {
+            todo!()
+        }
+
+        fn visit_assign(&mut self, _data: &AssignExpr) -> FoxResult<String> {
             todo!()
         }
     }

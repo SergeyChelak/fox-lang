@@ -95,6 +95,12 @@ impl ExpressionVisitor<Object> for Interpreter {
     fn visit_variable(&mut self, data: &VariableExpr) -> FoxResult<Object> {
         self.environment.get(&data.name)
     }
+
+    fn visit_assign(&mut self, data: &AssignExpr) -> FoxResult<Object> {
+        let value = self.evaluate(&data.value)?;
+        self.environment.assign(&data.name, value.clone())?;
+        Ok(value)
+    }
 }
 
 impl StatementVisitor<()> for Interpreter {

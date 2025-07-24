@@ -81,7 +81,28 @@ impl<'l> Parser<'l> {
     }
 
     fn expression(&mut self) -> FoxResult<Expression> {
-        self.equality()
+        self.assignment()
+    }
+
+    fn assignment(&mut self) -> FoxResult<Expression> {
+        let expr = self.equality()?;
+        if !self.matches(&[TokenType::Equal]) {
+            return Ok(expr);
+        }
+
+        let equals = self.force_previous_token()?;
+        let value = self.assignment()?;
+
+        match expr {
+            Expression::Variable(data) => {
+                let name = data.name;
+                Ok(Expression::assign(name, Box::new(value)))
+            }
+            _ => {
+                let err = FoxError::token(ErrorKind::InvalidAssignmentTarget, Some(equals));
+                Err(err)
+            }
+        }
     }
 
     fn parse_binary<T>(

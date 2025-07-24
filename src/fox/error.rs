@@ -63,6 +63,7 @@ pub enum ErrorKind {
     ExpectedSemicolon,
     ExpectedVariableName,
     UndefinedVariable(String),
+    InvalidAssignmentTarget,
     OperandMustBeNumber,
     OperandsMustBeSameType,
 }
@@ -79,6 +80,7 @@ impl Display for ErrorKind {
             ExpectedSemicolon => "Expected ';'",
             ExpectedVariableName => "Expect variable name",
             UndefinedVariable(name) => &format!("Undefined variable {name}"),
+            InvalidAssignmentTarget => "Invalid assignment target",
             OperandMustBeNumber => "Operand must be a number",
             OperandsMustBeSameType => "Operands must be two numbers or two strings",
         };

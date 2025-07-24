@@ -15,6 +15,18 @@ impl Environment {
         }
     }
 
+    pub fn assign(&mut self, name: &Token, value: Object) -> FoxResult<()> {
+        let key = &name.lexeme;
+        if !self.values.contains_key(key) {
+            return Err(FoxError::token(
+                super::ErrorKind::UndefinedVariable(key.clone()),
+                Some(name.clone()),
+            ));
+        }
+        self.define(key, value);
+        Ok(())
+    }
+
     pub fn define(&mut self, name: &str, object: Object) {
         self.values.insert(name.to_string(), object);
     }
