@@ -1,26 +1,36 @@
-use crate::fox::{ErrorKind, FoxError, FoxResult, Object, TokenType, ast::*};
+use crate::fox::{
+    ErrorKind, FoxError, FoxResult, Object, TokenType, ast::*, environment::Environment,
+};
 
-pub struct Interpreter;
+pub struct Interpreter {
+    environment: Environment,
+}
 
 impl Interpreter {
-    pub fn interpret(&self, statements: &[Statement]) -> FoxResult<()> {
+    pub fn new() -> Self {
+        Self {
+            environment: Environment::new(),
+        }
+    }
+
+    pub fn interpret(&mut self, statements: &[Statement]) -> FoxResult<()> {
         for statement in statements {
             self.execute(statement)?;
         }
         Ok(())
     }
 
-    fn execute(&self, stmt: &Statement) -> FoxResult<()> {
+    fn execute(&mut self, stmt: &Statement) -> FoxResult<()> {
         stmt.accept(self)
     }
 
-    fn evaluate(&self, expr: &Expression) -> FoxResult<Object> {
+    fn evaluate(&mut self, expr: &Expression) -> FoxResult<Object> {
         expr.accept(self)
     }
 }
 
 impl ExpressionVisitor<Object> for Interpreter {
-    fn visit_binary(&self, data: &BinaryData) -> FoxResult<Object> {
+    fn visit_binary(&mut self, data: &BinaryData) -> FoxResult<Object> {
         let left = self.evaluate(&data.left)?;
         let right = self.evaluate(&data.right)?;
         use Object::*;
@@ -59,15 +69,15 @@ impl ExpressionVisitor<Object> for Interpreter {
         }
     }
 
-    fn visit_grouping(&self, data: &GroupingData) -> FoxResult<Object> {
+    fn visit_grouping(&mut self, data: &GroupingData) -> FoxResult<Object> {
         self.evaluate(&data.expression)
     }
 
-    fn visit_literal(&self, data: &LiteralData) -> FoxResult<Object> {
+    fn visit_literal(&mut self, data: &LiteralData) -> FoxResult<Object> {
         Ok(data.value.clone())
     }
 
-    fn visit_unary(&self, data: &UnaryData) -> FoxResult<Object> {
+    fn visit_unary(&mut self, data: &UnaryData) -> FoxResult<Object> {
         let right = self.evaluate(&data.expression)?;
 
         use TokenType::*;
@@ -82,25 +92,27 @@ impl ExpressionVisitor<Object> for Interpreter {
         }
     }
 
-    fn visit_variable(&self, data: &VariableData) -> FoxResult<Object> {
-        todo!()
+    fn visit_variable(&mut self, data: &VariableData) -> FoxResult<Object> {
+        self.environment.get(&data.name)
     }
 }
 
 impl StatementVisitor<()> for Interpreter {
-    fn visit_expression(&self, data: &ExpressionData) -> FoxResult<()> {
+    fn visit_expression(&mut self, data: &ExpressionData) -> FoxResult<()> {
         self.evaluate(&data.expression)?;
         Ok(())
     }
 
-    fn visit_print(&self, data: &PrintData) -> FoxResult<()> {
+    fn visit_print(&mut self, data: &PrintData) -> FoxResult<()> {
         let value = self.evaluate(&data.expression)?;
         println!("{value}");
         Ok(())
     }
 
-    fn visit_var(&self, _data: &VarData) -> FoxResult<()> {
-        todo!()
+    fn visit_var(&mut self, data: &VarData) -> FoxResult<()> {
+        let value = self.evaluate(&data.initializer)?;
+        self.environment.define(&data.name.lexeme, value);
+        Ok(())
     }
 }
 

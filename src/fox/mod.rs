@@ -1,4 +1,5 @@
 mod ast;
+mod environment;
 mod error;
 mod interpreter;
 mod parser;
@@ -34,7 +35,8 @@ impl Fox {
         let mut parser = Parser::new(&tokens);
         let statements = parser.parse()?;
 
-        Interpreter.interpret(&statements)
+        let mut interpreter = Interpreter::new();
+        interpreter.interpret(&statements)
     }
 
     pub fn error_description(&self, error: &FoxError) -> String {

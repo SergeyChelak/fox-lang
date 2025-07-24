@@ -37,8 +37,8 @@ impl FoxError {
         }
     }
 
-    pub fn kind(&self) -> ErrorKind {
-        self.kind
+    pub fn kind(&self) -> &ErrorKind {
+        &self.kind
     }
 
     pub fn info(&self) -> &ErrorInfo {
@@ -53,7 +53,7 @@ pub enum ErrorInfo {
     Token(Token),
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub enum ErrorKind {
     UnexpectedCharacter,
     UnterminatedString,
@@ -62,6 +62,7 @@ pub enum ErrorKind {
     ExpectedOperator,
     ExpectedSemicolon,
     ExpectedVariableName,
+    UndefinedVariable(String),
     OperandMustBeNumber,
     OperandsMustBeSameType,
 }
@@ -77,6 +78,7 @@ impl Display for ErrorKind {
             ExpectedOperator => "Expect operator",
             ExpectedSemicolon => "Expected ';'",
             ExpectedVariableName => "Expect variable name",
+            UndefinedVariable(name) => &format!("Undefined variable {name}"),
             OperandMustBeNumber => "Operand must be a number",
             OperandsMustBeSameType => "Operands must be two numbers or two strings",
         };

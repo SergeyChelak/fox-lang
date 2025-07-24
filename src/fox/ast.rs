@@ -29,7 +29,7 @@ macro_rules! define_ast {
                 }
             )*
 
-            pub fn accept<T>(&self, visitor: &dyn $visitor_type<T>) -> FoxResult<T> {
+            pub fn accept<T>(&self, visitor: &mut dyn $visitor_type<T>) -> FoxResult<T> {
                 match self {
                     $(
                         Self::$option(data) => data.accept(visitor),
@@ -44,7 +44,7 @@ macro_rules! define_ast {
             }
 
             impl $option_data {
-                fn accept<T>(&self, visitor: &dyn $visitor_type<T>) -> FoxResult<T> {
+                fn accept<T>(&self, visitor: &mut dyn $visitor_type<T>) -> FoxResult<T> {
                     visitor.$fn_visit(self)
                 }
             }
@@ -52,7 +52,7 @@ macro_rules! define_ast {
 
         pub trait $visitor_type<T> {
             $(
-                fn $fn_visit(&self, data: &$option_data) -> FoxResult<T>;
+                fn $fn_visit(&mut self, data: &$option_data) -> FoxResult<T>;
             )*
         }
     };
@@ -120,11 +120,11 @@ define_ast!(
 pub struct AstPrinter;
 
 impl AstPrinter {
-    pub fn print(&self, expr: &Expression) -> FoxResult<String> {
+    pub fn print(&mut self, expr: &Expression) -> FoxResult<String> {
         expr.accept(self)
     }
 
-    fn parenthesize(&self, name: &str, expressions: &[&Expression]) -> FoxResult<String> {
+    fn parenthesize(&mut self, name: &str, expressions: &[&Expression]) -> FoxResult<String> {
         let mut result = format!("({name}");
 
         for expr in expressions {
@@ -139,24 +139,24 @@ impl AstPrinter {
 }
 
 impl ExpressionVisitor<String> for AstPrinter {
-    fn visit_binary(&self, data: &BinaryData) -> FoxResult<String> {
+    fn visit_binary(&mut self, data: &BinaryData) -> FoxResult<String> {
         let exprs = [data.left.as_ref(), data.right.as_ref()];
         self.parenthesize(data.operator.lexeme.as_str(), &exprs)
     }
 
-    fn visit_grouping(&self, data: &GroupingData) -> FoxResult<String> {
+    fn visit_grouping(&mut self, data: &GroupingData) -> FoxResult<String> {
         self.parenthesize("group", &[&data.expression])
     }
 
-    fn visit_literal(&self, data: &LiteralData) -> FoxResult<String> {
+    fn visit_literal(&mut self, data: &LiteralData) -> FoxResult<String> {
         Ok(format!("{}", data.value))
     }
 
-    fn visit_unary(&self, data: &UnaryData) -> FoxResult<String> {
+    fn visit_unary(&mut self, data: &UnaryData) -> FoxResult<String> {
         self.parenthesize(data.operator.lexeme.as_str(), &[&data.expression])
     }
 
-    fn visit_variable(&self, _data: &VariableData) -> FoxResult<String> {
+    fn visit_variable(&mut self, _data: &VariableData) -> FoxResult<String> {
         todo!()
     }
 }
