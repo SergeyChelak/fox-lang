@@ -1,4 +1,4 @@
-use super::{CodeLocation, ErrorKind, FoxError, Object, Source, Token, TokenType};
+use super::{CodeLocation, ErrorKind, FoxError, FoxResult, Object, Source, Token, TokenType};
 
 pub struct Scanner<'l> {
     start: usize,
@@ -22,7 +22,7 @@ impl<'l> Scanner<'l> {
         }
     }
 
-    pub fn scan_tokens(&mut self) -> Result<Vec<Token>, FoxError> {
+    pub fn scan_tokens(&mut self) -> FoxResult<Vec<Token>> {
         let mut tokens = Vec::<Token>::new();
         let mut is_eof = false;
         while !is_eof {
@@ -40,7 +40,7 @@ impl<'l> Scanner<'l> {
         Ok(tokens)
     }
 
-    fn scan_next(&mut self) -> Result<ScanData, FoxError> {
+    fn scan_next(&mut self) -> FoxResult<ScanData> {
         let Some(ch) = self.advance() else {
             return Ok(self.scan_data_by_type(Eof));
         };
@@ -133,7 +133,7 @@ impl<'l> Scanner<'l> {
         }
     }
 
-    fn scan_string(&mut self) -> Result<ScanData, FoxError> {
+    fn scan_string(&mut self) -> FoxResult<ScanData> {
         loop {
             let Some(ch) = self.advance() else {
                 return Err(self.error(ErrorKind::UnterminatedString));
@@ -150,7 +150,7 @@ impl<'l> Scanner<'l> {
         }
     }
 
-    fn scan_number(&mut self) -> Result<ScanData, FoxError> {
+    fn scan_number(&mut self) -> FoxResult<ScanData> {
         while is_digit(self.peek()) {
             _ = self.advance();
         }

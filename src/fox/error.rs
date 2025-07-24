@@ -1,5 +1,7 @@
 use super::CodeLocation;
 
+pub type FoxResult<T> = Result<T, FoxError>;
+
 #[derive(Debug)]
 pub struct FoxError {
     kind: ErrorKind,

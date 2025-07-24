@@ -1,4 +1,4 @@
-use crate::fox::{FoxError, Object, TokenType, expression::Expression};
+use crate::fox::{FoxError, FoxResult, Object, TokenType, expression::Expression};
 
 use super::{ErrorKind, Token};
 
@@ -12,11 +12,11 @@ impl<'l> Parser<'l> {
         Self { tokens, current: 0 }
     }
 
-    pub fn parse(&mut self) -> Result<Expression, FoxError> {
+    pub fn parse(&mut self) -> FoxResult<Expression> {
         self.expression()
     }
 
-    fn expression(&mut self) -> Result<Expression, FoxError> {
+    fn expression(&mut self) -> FoxResult<Expression> {
         self.equality()
     }
 
@@ -26,7 +26,7 @@ impl<'l> Parser<'l> {
         token_types: &[TokenType],
     ) -> Result<Expression, FoxError>
     where
-        T: Fn(&mut Self) -> Result<Expression, FoxError>,
+        T: Fn(&mut Self) -> FoxResult<Expression>,
     {
         let mut expr = advance_expr(self)?;
 
@@ -39,27 +39,27 @@ impl<'l> Parser<'l> {
         Ok(expr)
     }
 
-    fn equality(&mut self) -> Result<Expression, FoxError> {
+    fn equality(&mut self) -> FoxResult<Expression> {
         use TokenType::*;
         self.parse_binary(Self::comparison, &[Bang, Equal])
     }
 
-    fn comparison(&mut self) -> Result<Expression, FoxError> {
+    fn comparison(&mut self) -> FoxResult<Expression> {
         use TokenType::*;
         self.parse_binary(Self::term, &[Greater, GreaterEqual, Less, LessEqual])
     }
 
-    fn term(&mut self) -> Result<Expression, FoxError> {
+    fn term(&mut self) -> FoxResult<Expression> {
         use TokenType::*;
         self.parse_binary(Self::factor, &[Minus, Plus])
     }
 
-    fn factor(&mut self) -> Result<Expression, FoxError> {
+    fn factor(&mut self) -> FoxResult<Expression> {
         use TokenType::*;
         self.parse_binary(Self::unary, &[Slash, Star])
     }
 
-    fn unary(&mut self) -> Result<Expression, FoxError> {
+    fn unary(&mut self) -> FoxResult<Expression> {
         use TokenType::*;
         if self.matches(&[Bang, Minus]) {
             let operator = self.force_previous_token()?;
@@ -70,7 +70,7 @@ impl<'l> Parser<'l> {
         self.primary()
     }
 
-    fn primary(&mut self) -> Result<Expression, FoxError> {
+    fn primary(&mut self) -> FoxResult<Expression> {
         use TokenType::*;
         if self.matches(&[False]) {
             return Ok(Expression::literal(Object::Bool(false)));
@@ -127,7 +127,7 @@ impl<'l> Parser<'l> {
         self.tokens.get(self.current - 1).cloned()
     }
 
-    fn force_previous_token(&self) -> Result<Token, FoxError> {
+    fn force_previous_token(&self) -> FoxResult<Token> {
         let Some(token) = self.previous_token() else {
             // TODO: provide code info from current token
             return Err(FoxError::error(ErrorKind::ExpectedOperator));
@@ -152,7 +152,7 @@ impl<'l> Parser<'l> {
         Ok(token)
     }
 
-    fn synchronize(&mut self) -> Result<(), FoxError> {
+    fn synchronize(&mut self) -> FoxResult<()> {
         self.advance();
 
         while let Some(current) = self.peek() {
