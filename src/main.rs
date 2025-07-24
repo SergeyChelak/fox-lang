@@ -1,6 +1,6 @@
 mod fox;
 
-use crate::fox::{AstPrinter, FoxError, FoxResult, Parser, Scanner, Source};
+use crate::fox::{FoxError, FoxResult, run};
 
 fn main() {
     let args = std::env::args().collect::<Vec<_>>();
@@ -25,18 +25,6 @@ fn run_file<T: AsRef<str>>(path: T) -> FoxResult<()> {
         .chars()
         .collect::<Vec<_>>();
     run(&data)
-}
-
-fn run(source: &Source) -> FoxResult<()> {
-    let mut scanner = Scanner::with_source(source);
-    let tokens = scanner.scan_tokens()?;
-
-    let mut parser = Parser::new(&tokens);
-    let expr = parser.parse()?;
-
-    let value = AstPrinter.print(&expr)?;
-    println!("AST: {}", value);
-    Ok(())
 }
 
 fn show_usage() {
