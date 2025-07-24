@@ -9,7 +9,7 @@ pub struct Token {
 }
 
 impl Token {
-    pub fn new(
+    pub fn _new(
         token_type: TokenType,
         lexeme: &str,
         literal: Object,

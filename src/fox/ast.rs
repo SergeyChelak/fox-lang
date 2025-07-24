@@ -117,50 +117,6 @@ define_ast!(
     }
 );
 
-pub struct AstPrinter;
-
-impl AstPrinter {
-    pub fn print(&mut self, expr: &Expression) -> FoxResult<String> {
-        expr.accept(self)
-    }
-
-    fn parenthesize(&mut self, name: &str, expressions: &[&Expression]) -> FoxResult<String> {
-        let mut result = format!("({name}");
-
-        for expr in expressions {
-            let value = expr.accept(self)?;
-            result.push(' ');
-            result.push_str(&value);
-        }
-
-        result.push(')');
-        Ok(result)
-    }
-}
-
-impl ExpressionVisitor<String> for AstPrinter {
-    fn visit_binary(&mut self, data: &BinaryData) -> FoxResult<String> {
-        let exprs = [data.left.as_ref(), data.right.as_ref()];
-        self.parenthesize(data.operator.lexeme.as_str(), &exprs)
-    }
-
-    fn visit_grouping(&mut self, data: &GroupingData) -> FoxResult<String> {
-        self.parenthesize("group", &[&data.expression])
-    }
-
-    fn visit_literal(&mut self, data: &LiteralData) -> FoxResult<String> {
-        Ok(format!("{}", data.value))
-    }
-
-    fn visit_unary(&mut self, data: &UnaryData) -> FoxResult<String> {
-        self.parenthesize(data.operator.lexeme.as_str(), &[&data.expression])
-    }
-
-    fn visit_variable(&mut self, _data: &VariableData) -> FoxResult<String> {
-        todo!()
-    }
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
@@ -171,9 +127,9 @@ mod test {
         let expr = Expression::binary(
             Box::new(Expression::unary(
                 Box::new(Expression::literal(Object::Double(123.0))),
-                Token::new(TokenType::Minus, "-", Object::Nil, Default::default()),
+                Token::_new(TokenType::Minus, "-", Object::Nil, Default::default()),
             )),
-            Token::new(TokenType::Star, "*", Object::Nil, Default::default()),
+            Token::_new(TokenType::Star, "*", Object::Nil, Default::default()),
             Box::new(Expression::grouping(Box::new(Expression::literal(
                 Object::Double(45.67),
             )))),
@@ -181,5 +137,49 @@ mod test {
 
         let value = AstPrinter.print(&expr).unwrap();
         assert_eq!("(* (- 123) (group 45.67))", value);
+    }
+
+    pub struct AstPrinter;
+
+    impl AstPrinter {
+        pub fn print(&mut self, expr: &Expression) -> FoxResult<String> {
+            expr.accept(self)
+        }
+
+        fn parenthesize(&mut self, name: &str, expressions: &[&Expression]) -> FoxResult<String> {
+            let mut result = format!("({name}");
+
+            for expr in expressions {
+                let value = expr.accept(self)?;
+                result.push(' ');
+                result.push_str(&value);
+            }
+
+            result.push(')');
+            Ok(result)
+        }
+    }
+
+    impl ExpressionVisitor<String> for AstPrinter {
+        fn visit_binary(&mut self, data: &BinaryData) -> FoxResult<String> {
+            let exprs = [data.left.as_ref(), data.right.as_ref()];
+            self.parenthesize(data.operator.lexeme.as_str(), &exprs)
+        }
+
+        fn visit_grouping(&mut self, data: &GroupingData) -> FoxResult<String> {
+            self.parenthesize("group", &[&data.expression])
+        }
+
+        fn visit_literal(&mut self, data: &LiteralData) -> FoxResult<String> {
+            Ok(format!("{}", data.value))
+        }
+
+        fn visit_unary(&mut self, data: &UnaryData) -> FoxResult<String> {
+            self.parenthesize(data.operator.lexeme.as_str(), &[&data.expression])
+        }
+
+        fn visit_variable(&mut self, _data: &VariableData) -> FoxResult<String> {
+            todo!()
+        }
     }
 }
