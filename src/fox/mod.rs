@@ -29,7 +29,7 @@ impl Fox {
         let expr = parser.parse()?;
 
         let value = AstPrinter.print(&expr)?;
-        println!("AST: {}", value);
+        println!("AST: {value}");
         Ok(())
     }
 

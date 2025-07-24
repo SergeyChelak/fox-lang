@@ -40,9 +40,9 @@ impl Display for Object {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Nil => write!(f, "nil"),
-            Self::Double(value) => write!(f, "{}", value),
-            Self::String(value) => write!(f, "{}", value),
-            Self::Bool(value) => write!(f, "{}", value),
+            Self::Double(value) => write!(f, "{value}"),
+            Self::String(value) => write!(f, "{value}"),
+            Self::Bool(value) => write!(f, "{value}"),
         }
     }
 }

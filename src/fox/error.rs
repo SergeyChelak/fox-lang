@@ -99,11 +99,11 @@ impl ErrorLine {
         lines.push(format!("{}{}", prefix, self.text));
 
         let arrow_idx = prefix.len() + self.position;
-        let fill = std::iter::repeat(' ').take(arrow_idx).collect::<String>();
-        lines.push(format!("{}▲", fill));
+        let fill = " ".repeat(arrow_idx);
+        lines.push(format!("{fill}▲"));
 
         if !message.is_empty() {
-            let line = format!("{}└─ {}", fill, message);
+            let line = format!("{fill}└─ {message}");
             lines.push(line)
         }
 
@@ -120,18 +120,14 @@ impl ErrorLine {
         let mut is_moving = true;
         while is_moving {
             is_moving = false;
-            if left > 0 {
-                if !is_terminator(code[left - 1]) {
-                    is_moving = true;
-                    left -= 1;
-                }
+            if left > 0 && !is_terminator(code[left - 1]) {
+                is_moving = true;
+                left -= 1;
             }
 
-            if right < len - 1 {
-                if !is_terminator(code[right + 1]) {
-                    is_moving = true;
-                    right += 1;
-                }
+            if right < len - 1 && !is_terminator(code[right + 1]) {
+                is_moving = true;
+                right += 1;
             }
         }
 

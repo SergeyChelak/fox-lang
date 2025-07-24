@@ -152,7 +152,7 @@ impl<'l> Parser<'l> {
         Ok(token)
     }
 
-    fn synchronize(&mut self) -> FoxResult<()> {
+    fn _synchronize(&mut self) -> FoxResult<()> {
         self.advance();
 
         while let Some(current) = self.peek() {
@@ -191,5 +191,5 @@ impl<'l> Parser<'l> {
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    // use super::*;
 }

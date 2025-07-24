@@ -32,5 +32,5 @@ fn run<T: AsRef<str>>(path: T) {
 }
 
 fn show_usage() {
-    println!("Usage: fox-lang <script.fl>");
+    println!("Usage: fox-lang <script.fox>");
 }

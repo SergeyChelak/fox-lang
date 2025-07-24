@@ -277,7 +277,7 @@ mod test {
         let mut scanner = Scanner::with_source(&input);
         let result = scanner.scan_tokens();
         if let Err(err) = result {
-            panic!("Parse error: {:?}", err);
+            panic!("Parse error: {err:?}");
         }
         let token = &result.unwrap()[0];
         let Object::String(value) = &token.literal else {
@@ -302,7 +302,7 @@ mod test {
         let mut scanner = Scanner::with_source(&input);
         let result = scanner.scan_tokens();
         if let Err(err) = result {
-            panic!("Parse error: {:?}", err);
+            panic!("Parse error: {err:?}");
         }
         let token = &result.unwrap()[0];
         let Object::Double(value) = &token.literal else {
@@ -317,7 +317,7 @@ mod test {
         let mut scanner = Scanner::with_source(&input);
         let result = scanner.scan_tokens();
         if let Err(err) = result {
-            panic!("Parse error: {:?}", err);
+            panic!("Parse error: {err:?}");
         }
         let token = &result.unwrap()[0];
         let Object::Double(value) = &token.literal else {
