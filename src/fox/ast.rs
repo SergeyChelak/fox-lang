@@ -111,7 +111,7 @@ impl AstPrinter {
         expr.accept(self)
     }
 
-    fn parenthesize(&self, name: &str, expressions: &[&Box<Expression>]) -> FoxResult<String> {
+    fn parenthesize(&self, name: &str, expressions: &[&Expression]) -> FoxResult<String> {
         let mut result = format!("({name}");
 
         for expr in expressions {
@@ -127,7 +127,7 @@ impl AstPrinter {
 
 impl ExpressionVisitor<String> for AstPrinter {
     fn visit_binary(&self, data: &BinaryData) -> FoxResult<String> {
-        let exprs = [&data.left, &data.right];
+        let exprs = [data.left.as_ref(), data.right.as_ref()];
         self.parenthesize(data.operator.lexeme.as_str(), &exprs)
     }
 
