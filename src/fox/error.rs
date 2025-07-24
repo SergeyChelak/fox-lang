@@ -13,14 +13,14 @@ pub struct FoxError {
 }
 
 impl FoxError {
-    pub fn scanner(kind: ErrorKind, location: CodeLocation) -> Self {
+    pub fn code_location(kind: ErrorKind, location: CodeLocation) -> Self {
         Self {
             kind,
             info: ErrorInfo::Code(location),
         }
     }
 
-    pub fn parser(kind: ErrorKind, token: Option<Token>) -> Self {
+    pub fn token(kind: ErrorKind, token: Option<Token>) -> Self {
         let Some(token) = token else {
             return FoxError::error(kind);
         };
@@ -60,6 +60,8 @@ pub enum ErrorKind {
     RightParenthesisExpected,
     ExpressionExpected,
     ExpectedOperator,
+    OperandMustBeNumber,
+    OperandsMustBeSameType,
 }
 
 impl Display for ErrorKind {
@@ -71,6 +73,8 @@ impl Display for ErrorKind {
             RightParenthesisExpected => "Expect ')' after expression",
             ExpressionExpected => "Expect expression",
             ExpectedOperator => "Expect operator",
+            OperandMustBeNumber => "Operand must be a number",
+            OperandsMustBeSameType => "Operands must be two numbers or two strings",
         };
         write!(f, "{text}")
     }

@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{cmp::Ordering, fmt::Display};
 
 #[derive(Debug, Clone)]
 pub struct Token {
@@ -32,8 +32,21 @@ impl Token {
 pub enum Object {
     Nil,
     Double(f32),
-    String(String),
+    Text(String),
     Bool(bool),
+}
+
+impl PartialEq for Object {
+    fn eq(&self, other: &Self) -> bool {
+        use Object::*;
+        match (self, other) {
+            (Nil, Nil) => true,
+            (Double(l), Double(r)) => l.partial_cmp(r) == Some(Ordering::Equal),
+            (Text(l), Text(r)) => l == r,
+            (Bool(l), Bool(r)) => l == r,
+            _ => false,
+        }
+    }
 }
 
 impl Display for Object {
@@ -41,7 +54,7 @@ impl Display for Object {
         match self {
             Self::Nil => write!(f, "nil"),
             Self::Double(value) => write!(f, "{value}"),
-            Self::String(value) => write!(f, "{value}"),
+            Self::Text(value) => write!(f, "{value}"),
             Self::Bool(value) => write!(f, "{value}"),
         }
     }

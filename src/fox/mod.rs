@@ -1,14 +1,17 @@
 mod error;
 mod expression;
+mod interpreter;
 mod parser;
 mod scanner;
 mod token;
 
 pub use error::*;
-pub use expression::*;
-pub use parser::*;
-pub use scanner::*;
-pub use token::*;
+use expression::*;
+use parser::*;
+use scanner::*;
+use token::*;
+
+use crate::fox::interpreter::Interpreter;
 
 pub type Source = [char];
 
@@ -30,6 +33,10 @@ impl Fox {
 
         let value = AstPrinter.print(&expr)?;
         println!("AST: {value}");
+
+        let object = Interpreter.evaluate(&expr)?;
+        println!("Result: {}", object);
+
         Ok(())
     }
 

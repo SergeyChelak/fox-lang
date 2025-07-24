@@ -178,7 +178,7 @@ impl<'l> Parser<'l> {
     }
 
     fn error(&self, error_kind: ErrorKind) -> FoxError {
-        FoxError::parser(error_kind, self.peek())
+        FoxError::token(error_kind, self.peek())
     }
 
     fn check_type(&self, tt: &TokenType) -> bool {

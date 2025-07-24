@@ -40,7 +40,7 @@ macro_rules! ast_expressions {
 
         $(
             pub struct $option_data {
-                $($p_name: $p_type,)*
+                $(pub $p_name: $p_type,)*
             }
 
             impl $option_data {

@@ -144,7 +144,7 @@ impl<'l> Scanner<'l> {
 
             if ch == '\"' {
                 let value = self.substring(self.start + 1, self.current - 1);
-                let data = self.scan_data_by_type_literal(TokenType::String, Object::String(value));
+                let data = self.scan_data_by_type_literal(TokenType::String, Object::Text(value));
                 break Ok(data);
             }
         }
@@ -224,7 +224,7 @@ impl<'l> Scanner<'l> {
     }
 
     fn error(&self, error_kind: ErrorKind) -> FoxError {
-        FoxError::scanner(error_kind, self.code_location())
+        FoxError::code_location(error_kind, self.code_location())
     }
 
     fn code_location(&self) -> CodeLocation {
@@ -280,7 +280,7 @@ mod test {
             panic!("Parse error: {err:?}");
         }
         let token = &result.unwrap()[0];
-        let Object::String(value) = &token.literal else {
+        let Object::Text(value) = &token.literal else {
             panic!("Invalid literal type");
         };
         assert_eq!(*value, "ABCDEF".to_string());
