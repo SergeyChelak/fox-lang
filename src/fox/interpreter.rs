@@ -30,7 +30,7 @@ impl Interpreter {
 }
 
 impl ExpressionVisitor<Object> for Interpreter {
-    fn visit_binary(&mut self, data: &BinaryData) -> FoxResult<Object> {
+    fn visit_binary(&mut self, data: &BinaryExpr) -> FoxResult<Object> {
         let left = self.evaluate(&data.left)?;
         let right = self.evaluate(&data.right)?;
         use Object::*;
@@ -69,15 +69,15 @@ impl ExpressionVisitor<Object> for Interpreter {
         }
     }
 
-    fn visit_grouping(&mut self, data: &GroupingData) -> FoxResult<Object> {
+    fn visit_grouping(&mut self, data: &GroupingExpr) -> FoxResult<Object> {
         self.evaluate(&data.expression)
     }
 
-    fn visit_literal(&mut self, data: &LiteralData) -> FoxResult<Object> {
+    fn visit_literal(&mut self, data: &LiteralExpr) -> FoxResult<Object> {
         Ok(data.value.clone())
     }
 
-    fn visit_unary(&mut self, data: &UnaryData) -> FoxResult<Object> {
+    fn visit_unary(&mut self, data: &UnaryExpr) -> FoxResult<Object> {
         let right = self.evaluate(&data.expression)?;
 
         use TokenType::*;
@@ -92,24 +92,24 @@ impl ExpressionVisitor<Object> for Interpreter {
         }
     }
 
-    fn visit_variable(&mut self, data: &VariableData) -> FoxResult<Object> {
+    fn visit_variable(&mut self, data: &VariableExpr) -> FoxResult<Object> {
         self.environment.get(&data.name)
     }
 }
 
 impl StatementVisitor<()> for Interpreter {
-    fn visit_expression(&mut self, data: &ExpressionData) -> FoxResult<()> {
+    fn visit_expression(&mut self, data: &ExpressionStmt) -> FoxResult<()> {
         self.evaluate(&data.expression)?;
         Ok(())
     }
 
-    fn visit_print(&mut self, data: &PrintData) -> FoxResult<()> {
+    fn visit_print(&mut self, data: &PrintStmt) -> FoxResult<()> {
         let value = self.evaluate(&data.expression)?;
         println!("{value}");
         Ok(())
     }
 
-    fn visit_var(&mut self, data: &VarData) -> FoxResult<()> {
+    fn visit_var(&mut self, data: &VarStmt) -> FoxResult<()> {
         let value = self.evaluate(&data.initializer)?;
         self.environment.define(&data.name.lexeme, value);
         Ok(())

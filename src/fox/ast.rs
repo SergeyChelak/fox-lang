@@ -60,8 +60,15 @@ macro_rules! define_ast {
 
 define_ast!(
     Expression accepting ExpressionVisitor {
+        // Assign(
+        //     AssignExpr {
+        //         name: Token,
+        //         value: Box<Expression>,
+        //     }
+        // ) init: assign, visit: visit_assign,
+
         Binary(
-            BinaryData {
+            BinaryExpr {
                 left: Box<Expression>,
                 operator: Token,
                 right: Box<Expression>
@@ -69,25 +76,25 @@ define_ast!(
         ) init: binary, visit: visit_binary,
 
         Grouping(
-            GroupingData {
+            GroupingExpr {
                 expression: Box<Expression>
             }
         ) init: grouping, visit: visit_grouping,
 
         Literal(
-            LiteralData {
+            LiteralExpr {
                 value: Object
             }
         ) init: literal, visit: visit_literal,
 
-        Unary(UnaryData {
+        Unary(UnaryExpr {
                 expression: Box<Expression>,
                 operator: Token
             }
         ) init: unary, visit: visit_unary,
 
         Variable(
-            VariableData {
+            VariableExpr {
                 name: Token
             }
         ) init: variable, visit: visit_variable,
@@ -97,19 +104,19 @@ define_ast!(
 define_ast!(
     Statement accepting StatementVisitor {
         Expression(
-            ExpressionData {
+            ExpressionStmt {
                 expression: Box<Expression>
             }
         ) init: expression, visit: visit_expression,
 
         Print(
-            PrintData {
+            PrintStmt {
                 expression: Box<Expression>
             }
         ) init: print, visit: visit_print,
 
         Var(
-            VarData {
+            VarStmt {
                 name: Token,
                 initializer: Box<Expression>,
             }
@@ -161,24 +168,24 @@ mod test {
     }
 
     impl ExpressionVisitor<String> for AstPrinter {
-        fn visit_binary(&mut self, data: &BinaryData) -> FoxResult<String> {
+        fn visit_binary(&mut self, data: &BinaryExpr) -> FoxResult<String> {
             let exprs = [data.left.as_ref(), data.right.as_ref()];
             self.parenthesize(data.operator.lexeme.as_str(), &exprs)
         }
 
-        fn visit_grouping(&mut self, data: &GroupingData) -> FoxResult<String> {
+        fn visit_grouping(&mut self, data: &GroupingExpr) -> FoxResult<String> {
             self.parenthesize("group", &[&data.expression])
         }
 
-        fn visit_literal(&mut self, data: &LiteralData) -> FoxResult<String> {
+        fn visit_literal(&mut self, data: &LiteralExpr) -> FoxResult<String> {
             Ok(format!("{}", data.value))
         }
 
-        fn visit_unary(&mut self, data: &UnaryData) -> FoxResult<String> {
+        fn visit_unary(&mut self, data: &UnaryExpr) -> FoxResult<String> {
             self.parenthesize(data.operator.lexeme.as_str(), &[&data.expression])
         }
 
-        fn visit_variable(&mut self, _data: &VariableData) -> FoxResult<String> {
+        fn visit_variable(&mut self, _data: &VariableExpr) -> FoxResult<String> {
             todo!()
         }
     }
