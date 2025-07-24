@@ -19,10 +19,12 @@ impl<'l> Parser<'l> {
         let mut statements = Vec::new();
 
         while !self.is_at_end() {
-            match self.declaration() {
-                Ok(statement) => statements.push(statement),
-                Err(_) => self.synchronize(),
-            }
+            // match self.declaration() {
+            //     Ok(statement) => statements.push(statement),
+            //     Err(_) => self.synchronize(),
+            // }
+            let statement = self.declaration()?;
+            statements.push(statement);
         }
 
         Ok(statements)
@@ -219,32 +221,32 @@ impl<'l> Parser<'l> {
         Ok(token)
     }
 
-    fn synchronize(&mut self) {
-        self.advance();
+    // fn synchronize(&mut self) {
+    //     self.advance();
 
-        while let Some(current) = self.peek() {
-            use TokenType::*;
-            if self
-                .previous_token()
-                .map(|token| token.token_type == Semicolon)
-                .unwrap_or(false)
-            {
-                break;
-            }
+    //     while let Some(current) = self.peek() {
+    //         use TokenType::*;
+    //         if self
+    //             .previous_token()
+    //             .map(|token| token.token_type == Semicolon)
+    //             .unwrap_or(false)
+    //         {
+    //             break;
+    //         }
 
-            if matches!(
-                current.token_type,
-                Class | Fun | Var | For | If | While | Print | Return
-            ) {
-                break;
-            }
+    //         if matches!(
+    //             current.token_type,
+    //             Class | Fun | Var | For | If | While | Print | Return
+    //         ) {
+    //             break;
+    //         }
 
-            self.advance();
-        }
-    }
+    //         self.advance();
+    //     }
+    // }
 
     fn error(&self, error_kind: ErrorKind) -> FoxError {
-        FoxError::token(error_kind, self.peek())
+        FoxError::token(error_kind, self.previous_token())
     }
 
     fn check_type(&self, tt: &TokenType) -> bool {

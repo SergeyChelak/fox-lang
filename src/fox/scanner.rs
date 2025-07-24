@@ -228,7 +228,7 @@ impl<'l> Scanner<'l> {
     }
 
     fn code_location(&self) -> CodeLocation {
-        CodeLocation::new(self.line, self.current)
+        CodeLocation::new(self.line, self.current.saturating_sub(1))
     }
 
     fn substring(&self, start: usize, end: usize) -> String {
