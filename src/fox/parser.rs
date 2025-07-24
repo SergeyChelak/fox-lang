@@ -19,8 +19,10 @@ impl<'l> Parser<'l> {
         let mut statements = Vec::new();
 
         while !self.is_at_end() {
-            let statement = self.statement()?;
-            statements.push(statement);
+            match self.declaration() {
+                Ok(statement) => statements.push(statement),
+                Err(_) => self.synchronize(),
+            }
         }
 
         Ok(statements)
@@ -34,6 +36,27 @@ impl<'l> Parser<'l> {
             return true;
         };
         token.is_eof()
+    }
+
+    fn declaration(&mut self) -> FoxResult<Statement> {
+        if self.matches(&[TokenType::Var]) {
+            return self.var_declaration();
+        }
+        self.statement()
+    }
+
+    fn var_declaration(&mut self) -> FoxResult<Statement> {
+        let name = self.consume_token(TokenType::Identifier, ErrorKind::ExpectedVariableName)?;
+
+        let initializer = if self.matches(&[TokenType::Equal]) {
+            self.expression()?
+        } else {
+            Expression::literal(Object::Nil)
+        };
+
+        self.consume_token(TokenType::Semicolon, ErrorKind::ExpectedSemicolon)?;
+
+        Ok(Statement::var(name, Box::new(initializer)))
     }
 
     fn statement(&mut self) -> FoxResult<Statement> {
@@ -126,6 +149,12 @@ impl<'l> Parser<'l> {
             return Ok(Expression::literal(prev.literal));
         }
 
+        if self.matches(&[Identifier]) {
+            let prev = self.force_previous_token()?;
+            let expr = Expression::variable(prev);
+            return Ok(expr);
+        }
+
         if self.matches(&[LeftParenthesis]) {
             let expr = self.expression()?;
             self.consume_token(
@@ -190,7 +219,7 @@ impl<'l> Parser<'l> {
         Ok(token)
     }
 
-    fn _synchronize(&mut self) -> FoxResult<()> {
+    fn synchronize(&mut self) {
         self.advance();
 
         while let Some(current) = self.peek() {
@@ -212,7 +241,6 @@ impl<'l> Parser<'l> {
 
             self.advance();
         }
-        Ok(())
     }
 
     fn error(&self, error_kind: ErrorKind) -> FoxError {

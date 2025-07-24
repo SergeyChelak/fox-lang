@@ -61,6 +61,7 @@ pub enum ErrorKind {
     ExpressionExpected,
     ExpectedOperator,
     ExpectedSemicolon,
+    ExpectedVariableName,
     OperandMustBeNumber,
     OperandsMustBeSameType,
 }
@@ -71,10 +72,11 @@ impl Display for ErrorKind {
         let text = match self {
             UnexpectedCharacter => "Unexpected character",
             UnterminatedString => "Unterminated string",
-            RightParenthesisExpected => "Expect ')' after expression",
+            RightParenthesisExpected => "Expected ')'",
             ExpressionExpected => "Expect expression",
             ExpectedOperator => "Expect operator",
-            ExpectedSemicolon => "Expect ';' after expression",
+            ExpectedSemicolon => "Expected ';'",
+            ExpectedVariableName => "Expect variable name",
             OperandMustBeNumber => "Operand must be a number",
             OperandsMustBeSameType => "Operands must be two numbers or two strings",
         };

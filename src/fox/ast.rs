@@ -84,7 +84,13 @@ define_ast!(
                 expression: Box<Expression>,
                 operator: Token
             }
-        ) init: unary, visit: visit_unary
+        ) init: unary, visit: visit_unary,
+
+        Variable(
+            VariableData {
+                name: Token
+            }
+        ) init: variable, visit: visit_variable,
     }
 );
 
@@ -100,7 +106,14 @@ define_ast!(
             PrintData {
                 expression: Box<Expression>
             }
-        ) init: print, visit: visit_print
+        ) init: print, visit: visit_print,
+
+        Var(
+            VarData {
+                name: Token,
+                initializer: Box<Expression>,
+            }
+        ) init: var, visit: visit_var,
     }
 );
 
@@ -141,6 +154,10 @@ impl ExpressionVisitor<String> for AstPrinter {
 
     fn visit_unary(&self, data: &UnaryData) -> FoxResult<String> {
         self.parenthesize(data.operator.lexeme.as_str(), &[&data.expression])
+    }
+
+    fn visit_variable(&self, _data: &VariableData) -> FoxResult<String> {
+        todo!()
     }
 }
 

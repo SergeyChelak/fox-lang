@@ -81,6 +81,10 @@ impl ExpressionVisitor<Object> for Interpreter {
             _ => unreachable!(),
         }
     }
+
+    fn visit_variable(&self, data: &VariableData) -> FoxResult<Object> {
+        todo!()
+    }
 }
 
 impl StatementVisitor<()> for Interpreter {
@@ -93,6 +97,10 @@ impl StatementVisitor<()> for Interpreter {
         let value = self.evaluate(&data.expression)?;
         println!("{value}");
         Ok(())
+    }
+
+    fn visit_var(&self, _data: &VarData) -> FoxResult<()> {
+        todo!()
     }
 }
 
