@@ -4,8 +4,8 @@ use crate::fox::{FoxError, FoxResult, token::Token};
 
 use super::Object;
 
-pub type SharedReference<T> = Rc<RefCell<T>>;
-pub type SharedEnvironmentPtr = SharedReference<Environment>;
+pub type SharedPtr<T> = Rc<RefCell<T>>;
+pub type SharedEnvironmentPtr = SharedPtr<Environment>;
 
 pub struct Environment {
     values: HashMap<String, Object>,
