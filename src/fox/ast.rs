@@ -115,6 +115,14 @@ define_ast!(
             }
         ) init: expression, visit: visit_expression,
 
+        If(
+            IfStmt {
+                condition: Box<Expression>,
+                then_branch: Box<Statement>,
+                else_branch: Option<Box<Statement>>,
+            }
+        ) init: if_stmt, visit: visit_if,
+
         Print(
             PrintStmt {
                 expression: Box<Expression>

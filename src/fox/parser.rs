@@ -62,6 +62,9 @@ impl<'l> Parser<'l> {
     }
 
     fn statement(&mut self) -> FoxResult<Statement> {
+        if self.matches(&[TokenType::If]) {
+            return self.if_statement();
+        }
         if self.matches(&[TokenType::Print]) {
             return self.print_statement();
         }
@@ -70,6 +73,33 @@ impl<'l> Parser<'l> {
             return Ok(Statement::block(statements));
         }
         self.expression_statement()
+    }
+
+    fn if_statement(&mut self) -> FoxResult<Statement> {
+        self.consume_token(
+            TokenType::LeftParenthesis,
+            ErrorKind::ExpectedLeftParenthesisAfterIf,
+        )?;
+        let condition = self.expression()?;
+        self.consume_token(
+            TokenType::RightParenthesis,
+            ErrorKind::ExpectedRightParenthesisAfterIfCondition,
+        )?;
+
+        let then_branch = self.statement()?;
+
+        // I don't like this direct wrapping but it's a shortest code
+        let else_branch = if self.matches(&[TokenType::Else]) {
+            Some(Box::new(self.statement()?))
+        } else {
+            None
+        };
+
+        Ok(Statement::if_stmt(
+            Box::new(condition),
+            Box::new(then_branch),
+            else_branch,
+        ))
     }
 
     fn block(&mut self) -> FoxResult<Vec<Statement>> {

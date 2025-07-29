@@ -149,6 +149,16 @@ impl StatementVisitor<()> for Interpreter {
         let env = Environment::with(Some(self.environment.clone()));
         self.execute_block(&data.statements, env)
     }
+
+    fn visit_if(&mut self, data: &IfStmt) -> FoxResult<()> {
+        if self.evaluate(&data.condition)?.is_true() {
+            self.execute(&data.then_branch)
+        } else if let Some(else_branch) = &data.else_branch {
+            self.execute(else_branch)
+        } else {
+            Ok(())
+        }
+    }
 }
 
 #[cfg(test)]
