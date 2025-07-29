@@ -9,20 +9,6 @@ pub struct Token {
 }
 
 impl Token {
-    pub fn _new(
-        token_type: TokenType,
-        lexeme: &str,
-        literal: Object,
-        code_location: CodeLocation,
-    ) -> Self {
-        Self {
-            token_type,
-            lexeme: lexeme.to_string(),
-            literal,
-            code_location,
-        }
-    }
-
     pub fn is_eof(&self) -> bool {
         matches!(self.token_type, TokenType::Eof)
     }
