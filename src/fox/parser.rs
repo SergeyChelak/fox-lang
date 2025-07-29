@@ -68,6 +68,9 @@ impl<'l> Parser<'l> {
         if self.matches(&[TokenType::Print]) {
             return self.print_statement();
         }
+        if self.matches(&[TokenType::While]) {
+            return self.while_statement();
+        }
         if self.matches(&[TokenType::LeftBrace]) {
             let statements = self.block()?;
             return Ok(Statement::block(statements));
@@ -75,15 +78,30 @@ impl<'l> Parser<'l> {
         self.expression_statement()
     }
 
-    fn if_statement(&mut self) -> FoxResult<Statement> {
+    fn while_statement(&mut self) -> FoxResult<Statement> {
         self.consume_token(
             TokenType::LeftParenthesis,
-            ErrorKind::ExpectedLeftParenthesisAfterIf,
+            ErrorKind::ExpectedLeftParenthesis("after 'while'".to_string()),
         )?;
         let condition = self.expression()?;
         self.consume_token(
             TokenType::RightParenthesis,
-            ErrorKind::ExpectedRightParenthesisAfterIfCondition,
+            ErrorKind::ExpectedRightParenthesis("after condition".to_string()),
+        )?;
+        let body = self.statement()?;
+
+        Ok(Statement::while_stmt(Box::new(condition), Box::new(body)))
+    }
+
+    fn if_statement(&mut self) -> FoxResult<Statement> {
+        self.consume_token(
+            TokenType::LeftParenthesis,
+            ErrorKind::ExpectedLeftParenthesis("after 'if'".to_string()),
+        )?;
+        let condition = self.expression()?;
+        self.consume_token(
+            TokenType::RightParenthesis,
+            ErrorKind::ExpectedRightParenthesis("after if condition".to_string()),
         )?;
 
         let then_branch = self.statement()?;

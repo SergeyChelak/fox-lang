@@ -169,6 +169,13 @@ impl StatementVisitor<()> for Interpreter {
             Ok(())
         }
     }
+
+    fn visit_while(&mut self, data: &WhileStmt) -> FoxResult<()> {
+        while self.evaluate(&data.condition)?.is_true() {
+            self.execute(&data.body)?;
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]

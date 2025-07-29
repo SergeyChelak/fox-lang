@@ -143,6 +143,13 @@ define_ast!(
                 initializer: Box<Expression>,
             }
         ) init: var, visit: visit_var,
+
+        While(
+            WhileStmt {
+                condition: Box<Expression>,
+                body: Box<Statement>,
+            }
+        ) init: while_stmt, visit: visit_while,
     }
 );
 
