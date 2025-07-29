@@ -131,7 +131,7 @@ impl<'l> Parser<'l> {
     }
 
     fn assignment(&mut self) -> FoxResult<Expression> {
-        let expr = self.equality()?;
+        let expr = self.or()?;
         if !self.matches(&[TokenType::Equal]) {
             return Ok(expr);
         }
@@ -149,6 +149,30 @@ impl<'l> Parser<'l> {
                 Err(err)
             }
         }
+    }
+
+    fn or(&mut self) -> FoxResult<Expression> {
+        let mut expr = self.and()?;
+
+        while self.matches(&[TokenType::Or]) {
+            let operator = self.force_previous_token()?;
+            let right = self.and()?;
+            expr = Expression::logical(Box::new(expr), operator, Box::new(right));
+        }
+
+        Ok(expr)
+    }
+
+    fn and(&mut self) -> FoxResult<Expression> {
+        let mut expr = self.equality()?;
+
+        while self.matches(&[TokenType::And]) {
+            let operator = self.force_previous_token()?;
+            let right = self.equality()?;
+            expr = Expression::logical(Box::new(expr), operator, Box::new(right));
+        }
+
+        Ok(expr)
     }
 
     fn parse_binary<T>(

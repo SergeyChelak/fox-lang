@@ -123,6 +123,16 @@ impl ExpressionVisitor<Object> for Interpreter {
             .assign(&data.name, value.clone())?;
         Ok(value)
     }
+
+    fn visit_logical(&mut self, data: &LogicalExpr) -> FoxResult<Object> {
+        let left = self.evaluate(&data.left)?;
+
+        match data.operator.token_type {
+            TokenType::Or if left.is_true() => Ok(left),
+            TokenType::And if !left.is_true() => Ok(left),
+            _ => self.evaluate(&data.right),
+        }
+    }
 }
 
 impl StatementVisitor<()> for Interpreter {

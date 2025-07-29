@@ -87,6 +87,14 @@ define_ast!(
             }
         ) init: literal, visit: visit_literal,
 
+        Logical(
+            LogicalExpr {
+                left: Box<Expression>,
+                operator: Token,
+                right: Box<Expression>,
+            }
+        ) init: logical, visit: visit_logical,
+
         Unary(UnaryExpr {
                 expression: Box<Expression>,
                 operator: Token
@@ -204,6 +212,10 @@ mod test {
         }
 
         fn visit_assign(&mut self, _data: &AssignExpr) -> FoxResult<String> {
+            todo!()
+        }
+
+        fn visit_logical(&mut self, _data: &LogicalExpr) -> FoxResult<String> {
             todo!()
         }
     }
