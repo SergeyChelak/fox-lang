@@ -56,12 +56,18 @@ impl<'l> Parser<'l> {
             Expression::literal(Object::Nil)
         };
 
-        self.consume_token(TokenType::Semicolon, ErrorKind::ExpectedSemicolon)?;
+        self.consume_token(
+            TokenType::Semicolon,
+            ErrorKind::ExpectedSemicolon("after variable declaration".to_string()),
+        )?;
 
         Ok(Statement::var(name, Box::new(initializer)))
     }
 
     fn statement(&mut self) -> FoxResult<Statement> {
+        if self.matches(&[TokenType::For]) {
+            return self.for_statement();
+        }
         if self.matches(&[TokenType::If]) {
             return self.if_statement();
         }
@@ -76,6 +82,58 @@ impl<'l> Parser<'l> {
             return Ok(Statement::block(statements));
         }
         self.expression_statement()
+    }
+
+    fn for_statement(&mut self) -> FoxResult<Statement> {
+        self.consume_token(
+            TokenType::LeftParenthesis,
+            ErrorKind::ExpectedLeftParenthesis("after 'for'".to_string()),
+        )?;
+        let initializer = if self.matches(&[TokenType::Semicolon]) {
+            None
+        } else if self.matches(&[TokenType::Var]) {
+            Some(self.var_declaration()?)
+        } else {
+            Some(self.expression_statement()?)
+        };
+
+        let condition = if self.check_type(&TokenType::Semicolon) {
+            None
+        } else {
+            Some(self.expression()?)
+        };
+
+        self.consume_token(
+            TokenType::Semicolon,
+            ErrorKind::ExpectedSemicolon("after loop condition".to_string()),
+        )?;
+
+        let increment = if self.check_type(&TokenType::RightParenthesis) {
+            None
+        } else {
+            Some(self.expression()?)
+        };
+
+        self.consume_token(
+            TokenType::RightParenthesis,
+            ErrorKind::ExpectedRightParenthesis("after for clauses".to_string()),
+        )?;
+
+        let mut body = self.statement()?;
+
+        if let Some(increment) = increment {
+            body = Statement::block(vec![body, Statement::expression(Box::new(increment))]);
+        }
+
+        if let Some(condition) = condition {
+            body = Statement::while_stmt(Box::new(condition), Box::new(body));
+        }
+
+        if let Some(initializer) = initializer {
+            body = Statement::block(vec![initializer, body])
+        }
+
+        Ok(body)
     }
 
     fn while_statement(&mut self) -> FoxResult<Statement> {
@@ -134,13 +192,19 @@ impl<'l> Parser<'l> {
 
     fn print_statement(&mut self) -> FoxResult<Statement> {
         let expr = self.expression()?;
-        self.consume_token(TokenType::Semicolon, ErrorKind::ExpectedSemicolon)?;
+        self.consume_token(
+            TokenType::Semicolon,
+            ErrorKind::ExpectedSemicolon("after value".to_string()),
+        )?;
         Ok(Statement::print(Box::new(expr)))
     }
 
     fn expression_statement(&mut self) -> FoxResult<Statement> {
         let expr = self.expression()?;
-        self.consume_token(TokenType::Semicolon, ErrorKind::ExpectedSemicolon)?;
+        self.consume_token(
+            TokenType::Semicolon,
+            ErrorKind::ExpectedSemicolon("after expression".to_string()),
+        )?;
         Ok(Statement::expression(Box::new(expr)))
     }
 
