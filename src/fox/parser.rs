@@ -65,7 +65,23 @@ impl<'l> Parser<'l> {
         if self.matches(&[TokenType::Print]) {
             return self.print_statement();
         }
+        if self.matches(&[TokenType::LeftBrace]) {
+            let statements = self.block()?;
+            return Ok(Statement::block(statements));
+        }
         self.expression_statement()
+    }
+
+    fn block(&mut self) -> FoxResult<Vec<Statement>> {
+        let mut statements = Vec::new();
+
+        while !self.check_type(&TokenType::RightBrace) && !self.is_at_end() {
+            let stmt = self.declaration()?;
+            statements.push(stmt);
+        }
+
+        self.consume_token(TokenType::RightBrace, ErrorKind::ExpectedRightBrace)?;
+        Ok(statements)
     }
 
     fn print_statement(&mut self) -> FoxResult<Statement> {

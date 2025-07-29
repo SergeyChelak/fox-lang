@@ -103,6 +103,12 @@ define_ast!(
 
 define_ast!(
     Statement accepting StatementVisitor {
+        Block (
+            BlockStmt {
+                statements: Vec<Statement>,
+            }
+        ) init: block, visit: visit_block,
+
         Expression(
             ExpressionStmt {
                 expression: Box<Expression>

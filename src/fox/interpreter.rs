@@ -1,15 +1,17 @@
 use crate::fox::{
-    ErrorKind, FoxError, FoxResult, Object, TokenType, ast::*, environment::Environment,
+    ErrorKind, FoxError, FoxResult, Object, TokenType,
+    ast::*,
+    environment::{Environment, SharedEnvironmentPtr},
 };
 
 pub struct Interpreter {
-    environment: Environment,
+    environment: SharedEnvironmentPtr,
 }
 
 impl Interpreter {
     pub fn new() -> Self {
         Self {
-            environment: Environment::new(),
+            environment: Environment::new().shared_ptr(),
         }
     }
 
@@ -26,6 +28,24 @@ impl Interpreter {
 
     fn evaluate(&mut self, expr: &Expression) -> FoxResult<Object> {
         expr.accept(self)
+    }
+
+    fn execute_block(&mut self, statements: &[Statement], env: Environment) -> FoxResult<()> {
+        let prev = self.environment.clone();
+
+        self.environment = env.shared_ptr();
+
+        // emulate the throw behavior
+        let mut result: FoxResult<()> = FoxResult::Ok(());
+        for stmt in statements {
+            result = self.execute(stmt);
+            if result.is_err() {
+                break;
+            }
+        }
+
+        self.environment = prev;
+        result
     }
 }
 
@@ -93,12 +113,14 @@ impl ExpressionVisitor<Object> for Interpreter {
     }
 
     fn visit_variable(&mut self, data: &VariableExpr) -> FoxResult<Object> {
-        self.environment.get(&data.name)
+        self.environment.borrow().get(&data.name)
     }
 
     fn visit_assign(&mut self, data: &AssignExpr) -> FoxResult<Object> {
         let value = self.evaluate(&data.value)?;
-        self.environment.assign(&data.name, value.clone())?;
+        self.environment
+            .borrow_mut()
+            .assign(&data.name, value.clone())?;
         Ok(value)
     }
 }
@@ -117,8 +139,15 @@ impl StatementVisitor<()> for Interpreter {
 
     fn visit_var(&mut self, data: &VarStmt) -> FoxResult<()> {
         let value = self.evaluate(&data.initializer)?;
-        self.environment.define(&data.name.lexeme, value);
+        self.environment
+            .borrow_mut()
+            .define(&data.name.lexeme, value);
         Ok(())
+    }
+
+    fn visit_block(&mut self, data: &BlockStmt) -> FoxResult<()> {
+        let env = Environment::with(Some(self.environment.clone()));
+        self.execute_block(&data.statements, env)
     }
 }
 
