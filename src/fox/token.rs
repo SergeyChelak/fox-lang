@@ -1,4 +1,10 @@
-use std::{cmp::Ordering, fmt::Display};
+use std::{
+    cmp::Ordering,
+    fmt::Display,
+    time::{SystemTime, UNIX_EPOCH},
+};
+
+use crate::fox::ast::FunctionStmt;
 
 #[derive(Debug, Clone)]
 pub struct Token {
@@ -15,11 +21,21 @@ impl Token {
 }
 
 #[derive(Debug, Clone)]
+pub enum Func {
+    Builtin {
+        body: fn(&[Object]) -> Object,
+        arity: usize,
+    },
+    Declaration(Box<FunctionStmt>),
+}
+
+#[derive(Debug, Clone)]
 pub enum Object {
     Nil,
     Double(f32),
     Text(String),
     Bool(bool),
+    Callee(Func),
 }
 
 impl Object {
@@ -40,6 +56,10 @@ impl PartialEq for Object {
             (Double(l), Double(r)) => l.partial_cmp(r) == Some(Ordering::Equal),
             (Text(l), Text(r)) => l == r,
             (Bool(l), Bool(r)) => l == r,
+            (Callee(_), Callee(_)) => {
+                println!("[WARN] Callee comparison isn't implemented");
+                false
+            }
             _ => false,
         }
     }
@@ -52,7 +72,44 @@ impl Display for Object {
             Self::Double(value) => write!(f, "{value}"),
             Self::Text(value) => write!(f, "{value}"),
             Self::Bool(value) => write!(f, "{value}"),
+            Self::Callee(value) => write!(f, "{value}"),
         }
+    }
+}
+
+impl Display for Func {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "<")?;
+        if self.is_builtin() {
+            write!(f, "builtin ")?;
+        }
+        write!(f, "fun ({} args)", self.arity())?;
+        write!(f, ">")
+    }
+}
+
+impl Func {
+    pub fn clock() -> Self {
+        let body = |_: &[Object]| -> Object {
+            let time = SystemTime::now();
+            let Ok(duration) = time.duration_since(UNIX_EPOCH) else {
+                println!("[ERROR] failed to calculate system time duration");
+                return Object::Nil;
+            };
+            Object::Double(duration.as_secs() as f32)
+        };
+        Self::Builtin { body, arity: 0 }
+    }
+
+    pub fn arity(&self) -> usize {
+        match self {
+            Func::Builtin { arity, .. } => *arity,
+            Func::Declaration(stmt) => stmt.params.len(),
+        }
+    }
+
+    fn is_builtin(&self) -> bool {
+        matches!(self, Func::Builtin { .. })
     }
 }
 

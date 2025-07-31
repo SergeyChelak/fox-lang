@@ -14,6 +14,7 @@ macro_rules! define_ast {
             $(,)?
         }
     ) => {
+        #[derive(Debug, Clone)]
         pub enum $holder_type {
             $($option($option_data),)*
         }
@@ -39,6 +40,7 @@ macro_rules! define_ast {
         }
 
         $(
+            #[derive(Debug, Clone)]
             pub struct $option_data {
                 $(pub $p_name: $p_type,)*
             }
@@ -74,6 +76,14 @@ define_ast!(
                 right: Box<Expression>
             }
         ) init: binary, visit: visit_binary,
+
+        Call(
+            CallExpr {
+                callee: Box<Expression>,
+                paren: Token,
+                arguments: Vec<Expression>,
+            }
+        ) init: call, visit: visit_call,
 
         Grouping(
             GroupingExpr {
@@ -122,6 +132,14 @@ define_ast!(
                 expression: Box<Expression>
             }
         ) init: expression, visit: visit_expression,
+
+        Function(
+            FunctionStmt {
+                name: Token,
+                params: Vec<Token>,
+                body: Vec<Statement>,
+            }
+        ) init: function, visit: visit_function,
 
         If(
             IfStmt {

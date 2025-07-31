@@ -5,6 +5,8 @@ use crate::fox::{
 
 use super::{ErrorKind, Token};
 
+const MAX_FUNCTION_ARGUMENT_COUNT: usize = 255;
+
 pub struct Parser<'l> {
     tokens: &'l [Token],
     current: usize,
@@ -41,14 +43,46 @@ impl<'l> Parser<'l> {
     }
 
     fn declaration(&mut self) -> FoxResult<Statement> {
+        if self.matches(&[TokenType::Fun]) {
+            return self.function("function");
+        }
         if self.matches(&[TokenType::Var]) {
             return self.var_declaration();
         }
         self.statement()
     }
 
+    fn function(&mut self, kind: &str) -> FoxResult<Statement> {
+        let name = self.consume_token(TokenType::Identifier, &format!("Expect {kind} name"))?;
+        self.consume_token(
+            TokenType::LeftParenthesis,
+            &format!("Expect '(' after {kind} name"),
+        )?;
+        let mut params = Vec::new();
+
+        let mut next_param = !self.check_type(&TokenType::RightParenthesis);
+        while next_param {
+            if params.len() >= MAX_FUNCTION_ARGUMENT_COUNT {
+                return Err(self.error(ErrorKind::TooManyFunctionArguments));
+            }
+            let param = self.consume_token(TokenType::Identifier, "Expect parameter name")?;
+            params.push(param);
+            next_param = self.matches(&[TokenType::Comma]);
+        }
+        self.consume_token(TokenType::RightParenthesis, "Expect ')' after parameters")?;
+
+        self.consume_token(
+            TokenType::LeftBrace,
+            &format!("Expect '{{' before {kind} body"),
+        )?;
+
+        let body = self.block()?;
+
+        Ok(Statement::function(name, params, body))
+    }
+
     fn var_declaration(&mut self) -> FoxResult<Statement> {
-        let name = self.consume_token(TokenType::Identifier, ErrorKind::ExpectedVariableName)?;
+        let name = self.consume_token(TokenType::Identifier, "Expect variable name")?;
 
         let initializer = if self.matches(&[TokenType::Equal]) {
             self.expression()?
@@ -58,7 +92,7 @@ impl<'l> Parser<'l> {
 
         self.consume_token(
             TokenType::Semicolon,
-            ErrorKind::ExpectedSemicolon("after variable declaration".to_string()),
+            "Expected ';' after variable declaration",
         )?;
 
         Ok(Statement::var(name, Box::new(initializer)))
@@ -85,10 +119,7 @@ impl<'l> Parser<'l> {
     }
 
     fn for_statement(&mut self) -> FoxResult<Statement> {
-        self.consume_token(
-            TokenType::LeftParenthesis,
-            ErrorKind::ExpectedLeftParenthesis("after 'for'".to_string()),
-        )?;
+        self.consume_token(TokenType::LeftParenthesis, "Expect '(' after 'for'")?;
         let initializer = if self.matches(&[TokenType::Semicolon]) {
             None
         } else if self.matches(&[TokenType::Var]) {
@@ -103,10 +134,7 @@ impl<'l> Parser<'l> {
             Some(self.expression()?)
         };
 
-        self.consume_token(
-            TokenType::Semicolon,
-            ErrorKind::ExpectedSemicolon("after loop condition".to_string()),
-        )?;
+        self.consume_token(TokenType::Semicolon, "Expected ';' after loop condition")?;
 
         let increment = if self.check_type(&TokenType::RightParenthesis) {
             None
@@ -116,7 +144,7 @@ impl<'l> Parser<'l> {
 
         self.consume_token(
             TokenType::RightParenthesis,
-            ErrorKind::ExpectedRightParenthesis("after for clauses".to_string()),
+            "Expected ')' after for clauses",
         )?;
 
         let mut body = self.statement()?;
@@ -137,30 +165,18 @@ impl<'l> Parser<'l> {
     }
 
     fn while_statement(&mut self) -> FoxResult<Statement> {
-        self.consume_token(
-            TokenType::LeftParenthesis,
-            ErrorKind::ExpectedLeftParenthesis("after 'while'".to_string()),
-        )?;
+        self.consume_token(TokenType::LeftParenthesis, "Expected '(' after 'while'")?;
         let condition = self.expression()?;
-        self.consume_token(
-            TokenType::RightParenthesis,
-            ErrorKind::ExpectedRightParenthesis("after condition".to_string()),
-        )?;
+        self.consume_token(TokenType::RightParenthesis, "Expected ')' after condition")?;
         let body = self.statement()?;
 
         Ok(Statement::while_stmt(Box::new(condition), Box::new(body)))
     }
 
     fn if_statement(&mut self) -> FoxResult<Statement> {
-        self.consume_token(
-            TokenType::LeftParenthesis,
-            ErrorKind::ExpectedLeftParenthesis("after 'if'".to_string()),
-        )?;
+        self.consume_token(TokenType::LeftParenthesis, "Expected '(' after 'if'")?;
         let condition = self.expression()?;
-        self.consume_token(
-            TokenType::RightParenthesis,
-            ErrorKind::ExpectedRightParenthesis("after if condition".to_string()),
-        )?;
+        self.consume_token(TokenType::RightParenthesis, "Expect ')' after if condition")?;
 
         let then_branch = self.statement()?;
 
@@ -186,25 +202,19 @@ impl<'l> Parser<'l> {
             statements.push(stmt);
         }
 
-        self.consume_token(TokenType::RightBrace, ErrorKind::ExpectedRightBrace)?;
+        self.consume_token(TokenType::RightBrace, "Expected '}'")?;
         Ok(statements)
     }
 
     fn print_statement(&mut self) -> FoxResult<Statement> {
         let expr = self.expression()?;
-        self.consume_token(
-            TokenType::Semicolon,
-            ErrorKind::ExpectedSemicolon("after value".to_string()),
-        )?;
+        self.consume_token(TokenType::Semicolon, "Expected ';' after value")?;
         Ok(Statement::print(Box::new(expr)))
     }
 
     fn expression_statement(&mut self) -> FoxResult<Statement> {
         let expr = self.expression()?;
-        self.consume_token(
-            TokenType::Semicolon,
-            ErrorKind::ExpectedSemicolon("after expression".to_string()),
-        )?;
+        self.consume_token(TokenType::Semicolon, "Expected ';' after expression")?;
         Ok(Statement::expression(Box::new(expr)))
     }
 
@@ -304,7 +314,36 @@ impl<'l> Parser<'l> {
             return Ok(Expression::unary(Box::new(right), operator));
         }
 
-        self.primary()
+        self.call()
+    }
+
+    fn call(&mut self) -> FoxResult<Expression> {
+        let mut expr = self.primary()?;
+        while self.matches(&[TokenType::LeftParenthesis]) {
+            expr = self.finish_call(expr)?;
+        }
+        Ok(expr)
+    }
+
+    fn finish_call(&mut self, callee: Expression) -> FoxResult<Expression> {
+        let mut args = Vec::new();
+        if !self.check_type(&TokenType::RightParenthesis) {
+            loop {
+                if args.len() >= MAX_FUNCTION_ARGUMENT_COUNT {
+                    return Err(self.error(ErrorKind::TooManyFunctionArguments));
+                }
+                let expr = self.expression()?;
+                args.push(expr);
+                if !self.matches(&[TokenType::Comma]) {
+                    break;
+                }
+            }
+        }
+
+        let paren =
+            self.consume_token(TokenType::RightParenthesis, "Expected ')' after arguments")?;
+
+        Ok(Expression::call(Box::new(callee), paren, args))
     }
 
     fn primary(&mut self) -> FoxResult<Expression> {
@@ -332,10 +371,7 @@ impl<'l> Parser<'l> {
 
         if self.matches(&[LeftParenthesis]) {
             let expr = self.expression()?;
-            self.consume_token(
-                TokenType::RightParenthesis,
-                ErrorKind::RightParenthesisExpected,
-            )?;
+            self.consume_token(TokenType::RightParenthesis, "Expected ')'")?;
             return Ok(Expression::grouping(Box::new(expr)));
         }
         Err(self.error(ErrorKind::ExpressionExpected))
@@ -377,18 +413,15 @@ impl<'l> Parser<'l> {
         Ok(token)
     }
 
-    fn consume_token(
-        &mut self,
-        t_type: TokenType,
-        error_kind: ErrorKind,
-    ) -> Result<Token, FoxError> {
+    fn consume_token(&mut self, t_type: TokenType, message: &str) -> Result<Token, FoxError> {
         let token = if self.check_type(&t_type) {
             self.advance()
         } else {
             None
         };
         let Some(token) = token else {
-            let error = self.error(error_kind);
+            let kind = ErrorKind::Parse(message.to_string());
+            let error = self.error(kind);
             return Err(error);
         };
         Ok(token)

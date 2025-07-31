@@ -30,6 +30,11 @@ impl FoxError {
         }
     }
 
+    pub fn runtime(token: Option<Token>, message: &str) -> Self {
+        let kind = ErrorKind::Runtime(message.to_string());
+        Self::token(kind, token)
+    }
+
     pub fn error(kind: ErrorKind) -> Self {
         Self {
             kind,
@@ -57,18 +62,15 @@ pub enum ErrorInfo {
 pub enum ErrorKind {
     UnexpectedCharacter,
     UnterminatedString,
-    RightParenthesisExpected,
     ExpressionExpected,
     ExpectedOperator,
-    ExpectedSemicolon(String),
-    ExpectedRightBrace,
-    ExpectedLeftParenthesis(String),
-    ExpectedRightParenthesis(String),
-    ExpectedVariableName,
+    TooManyFunctionArguments,
     UndefinedVariable(String),
     InvalidAssignmentTarget,
     OperandMustBeNumber,
     OperandsMustBeSameType,
+    Runtime(String),
+    Parse(String),
 }
 
 impl Display for ErrorKind {
@@ -77,18 +79,14 @@ impl Display for ErrorKind {
         let text = match self {
             UnexpectedCharacter => "Unexpected character",
             UnterminatedString => "Unterminated string",
-            RightParenthesisExpected => "Expected ')'",
             ExpressionExpected => "Expect expression",
             ExpectedOperator => "Expect operator",
-            ExpectedSemicolon(details) => &format!("Expected ';' {details}"),
-            ExpectedRightBrace => "Expected '}'",
-            ExpectedLeftParenthesis(details) => &format!("Expect '(' {details}"),
-            ExpectedRightParenthesis(details) => &format!("Expect ')' {details}"),
-            ExpectedVariableName => "Expect variable name",
+            TooManyFunctionArguments => "Can't have more than 255 arguments",
             UndefinedVariable(name) => &format!("Undefined variable {name}"),
             InvalidAssignmentTarget => "Invalid assignment target",
             OperandMustBeNumber => "Operand must be a number",
             OperandsMustBeSameType => "Operands must be two numbers or two strings",
+            Runtime(message) | Parse(message) => message,
         };
         write!(f, "{text}")
     }

@@ -2,16 +2,23 @@ use crate::fox::{
     ErrorKind, FoxError, FoxResult, Object, TokenType,
     ast::*,
     environment::{Environment, SharedEnvironmentPtr},
+    token::Func,
 };
 
 pub struct Interpreter {
     environment: SharedEnvironmentPtr,
+    globals: SharedEnvironmentPtr,
 }
 
 impl Interpreter {
     pub fn new() -> Self {
+        let mut env = Environment::new();
+        // register builtin functions
+        env.define("clock", Object::Callee(Func::clock()));
+        let ptr = env.shared_ptr();
         Self {
-            environment: Environment::new().shared_ptr(),
+            environment: ptr.clone(),
+            globals: ptr,
         }
     }
 
@@ -46,6 +53,27 @@ impl Interpreter {
 
         self.environment = prev;
         result
+    }
+
+    fn call(&mut self, func: &Func, args: &[Object]) -> FoxResult<Object> {
+        match func {
+            Func::Builtin { body, .. } => Ok(body(args)),
+            Func::Declaration(decl) => self.execute_func(decl, args),
+        }
+    }
+
+    fn execute_func(&mut self, func: &FunctionStmt, args: &[Object]) -> FoxResult<Object> {
+        let mut env = Environment::with(Some(self.globals.clone()));
+
+        func.params
+            .iter()
+            .zip(args.iter())
+            .for_each(|(token, object)| {
+                env.define(&token.lexeme, object.clone());
+            });
+
+        self.execute_block(&func.body, env)?;
+        Ok(Object::Nil)
     }
 }
 
@@ -133,6 +161,29 @@ impl ExpressionVisitor<Object> for Interpreter {
             _ => self.evaluate(&data.right),
         }
     }
+
+    fn visit_call(&mut self, data: &CallExpr) -> FoxResult<Object> {
+        let Object::Callee(func) = self.evaluate(&data.callee)? else {
+            return Err(FoxError::runtime(
+                Some(data.paren.clone()),
+                "Can only call functions and classes",
+            ));
+        };
+
+        let mut args = Vec::new();
+        for arg in &data.arguments {
+            let expr = self.evaluate(arg)?;
+            args.push(expr);
+        }
+
+        let arity = func.arity();
+        if args.len() != arity {
+            let msg = format!("Expected {}  arguments but got {}", arity, args.len());
+            return Err(FoxError::runtime(Some(data.paren.clone()), &msg));
+        }
+
+        self.call(&func, &args)
+    }
 }
 
 impl StatementVisitor<()> for Interpreter {
@@ -174,6 +225,14 @@ impl StatementVisitor<()> for Interpreter {
         while self.evaluate(&data.condition)?.is_true() {
             self.execute(&data.body)?;
         }
+        Ok(())
+    }
+
+    fn visit_function(&mut self, data: &FunctionStmt) -> FoxResult<()> {
+        let object = Func::Declaration(Box::new(data.clone()));
+        self.environment
+            .borrow_mut()
+            .define(&data.name.lexeme, Object::Callee(object));
         Ok(())
     }
 }
