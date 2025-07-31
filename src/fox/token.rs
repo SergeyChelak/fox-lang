@@ -4,7 +4,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use crate::fox::ast::FunctionStmt;
+use crate::fox::{ast::FunctionStmt, environment::SharedEnvironmentPtr};
 
 #[derive(Debug, Clone)]
 pub struct Token {
@@ -26,7 +26,10 @@ pub enum Func {
         body: fn(&[Object]) -> Object,
         arity: usize,
     },
-    Declaration(Box<FunctionStmt>),
+    Declaration {
+        decl: Box<FunctionStmt>,
+        closure: SharedEnvironmentPtr,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -104,7 +107,7 @@ impl Func {
     pub fn arity(&self) -> usize {
         match self {
             Func::Builtin { arity, .. } => *arity,
-            Func::Declaration(stmt) => stmt.params.len(),
+            Func::Declaration { decl, .. } => decl.params.len(),
         }
     }
 

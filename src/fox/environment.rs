@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, fmt::Debug, rc::Rc};
 
 use crate::fox::{FoxError, FoxResult, token::Token};
 
@@ -7,6 +7,7 @@ use super::Object;
 pub type SharedPtr<T> = Rc<RefCell<T>>;
 pub type SharedEnvironmentPtr = SharedPtr<Environment>;
 
+#[derive(Debug)]
 pub struct Environment {
     values: HashMap<String, Object>,
     enclosing: Option<SharedEnvironmentPtr>,

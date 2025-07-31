@@ -7,7 +7,6 @@ use crate::fox::{
 
 pub struct Interpreter {
     environment: SharedEnvironmentPtr,
-    globals: SharedEnvironmentPtr,
 }
 
 impl Interpreter {
@@ -15,11 +14,8 @@ impl Interpreter {
         let mut env = Environment::new();
         // register builtin functions
         env.define("clock", Object::Callee(Func::clock()));
-        let ptr = env.shared_ptr();
-        Self {
-            environment: ptr.clone(),
-            globals: ptr,
-        }
+        let environment = env.shared_ptr();
+        Self { environment }
     }
 
     pub fn interpret(&mut self, statements: &[Statement]) -> FoxResult<()> {
@@ -58,12 +54,17 @@ impl Interpreter {
     fn call(&mut self, func: &Func, args: &[Object]) -> FoxResult<Object> {
         match func {
             Func::Builtin { body, .. } => Ok(body(args)),
-            Func::Declaration(decl) => self.execute_func(decl, args),
+            Func::Declaration { decl, closure } => self.execute_func(decl, closure.clone(), args),
         }
     }
 
-    fn execute_func(&mut self, func: &FunctionStmt, args: &[Object]) -> FoxResult<Object> {
-        let mut env = Environment::with(Some(self.globals.clone()));
+    fn execute_func(
+        &mut self,
+        func: &FunctionStmt,
+        closure: SharedEnvironmentPtr,
+        args: &[Object],
+    ) -> FoxResult<Object> {
+        let mut env = Environment::with(Some(closure));
 
         func.params
             .iter()
@@ -235,7 +236,10 @@ impl StatementVisitor<()> for Interpreter {
     }
 
     fn visit_function(&mut self, data: &FunctionStmt) -> FoxResult<()> {
-        let object = Func::Declaration(Box::new(data.clone()));
+        let object = Func::Declaration {
+            decl: Box::new(data.clone()),
+            closure: self.environment.clone(),
+        };
         self.environment
             .borrow_mut()
             .define(&data.name.lexeme, Object::Callee(object));
