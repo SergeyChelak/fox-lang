@@ -108,6 +108,9 @@ impl<'l> Parser<'l> {
         if self.matches(&[TokenType::Print]) {
             return self.print_statement();
         }
+        if self.matches(&[TokenType::Return]) {
+            return self.return_statement();
+        }
         if self.matches(&[TokenType::While]) {
             return self.while_statement();
         }
@@ -116,6 +119,17 @@ impl<'l> Parser<'l> {
             return Ok(Statement::block(statements));
         }
         self.expression_statement()
+    }
+
+    fn return_statement(&mut self) -> FoxResult<Statement> {
+        // let keyword = self.force_previous_token()?;
+        let mut value = None;
+        if !self.check_type(&TokenType::Semicolon) {
+            let expr = self.expression()?;
+            value = Some(Box::new(expr));
+        }
+        self.consume_token(TokenType::Semicolon, "Expect ';' after return value")?;
+        Ok(Statement::ret_fn(value))
     }
 
     fn for_statement(&mut self) -> FoxResult<Statement> {

@@ -72,7 +72,13 @@ impl Interpreter {
                 env.define(&token.lexeme, object.clone());
             });
 
-        self.execute_block(&func.body, env)?;
+        let result = self.execute_block(&func.body, env);
+        if let Err(err) = result {
+            return match err.kind() {
+                ErrorKind::Return(value) => Ok(value.clone()),
+                _ => Err(err),
+            };
+        }
         Ok(Object::Nil)
     }
 }
@@ -234,6 +240,15 @@ impl StatementVisitor<()> for Interpreter {
             .borrow_mut()
             .define(&data.name.lexeme, Object::Callee(object));
         Ok(())
+    }
+
+    fn visit_return(&mut self, data: &ReturnStmt) -> FoxResult<()> {
+        let value = if let Some(val) = &data.value {
+            self.evaluate(val)?
+        } else {
+            Object::Nil
+        };
+        Err(FoxError::error(ErrorKind::Return(value)))
     }
 }
 

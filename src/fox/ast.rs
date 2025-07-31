@@ -155,6 +155,13 @@ define_ast!(
             }
         ) init: print, visit: visit_print,
 
+        Return(
+            ReturnStmt {
+                // keyword: Token,
+                value: Option<Box<Expression>>,
+            }
+        ) init: ret_fn, visit: visit_return,
+
         Var(
             VarStmt {
                 name: Token,
