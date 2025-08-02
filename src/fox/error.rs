@@ -35,6 +35,11 @@ impl FoxError {
         Self::token(kind, token)
     }
 
+    pub fn resolver(token: Option<Token>, message: &str) -> Self {
+        let kind = ErrorKind::Resolver(message.to_string());
+        Self::token(kind, token)
+    }
+
     pub fn error(kind: ErrorKind) -> Self {
         Self {
             kind,
@@ -71,6 +76,7 @@ pub enum ErrorKind {
     OperandsMustBeSameType,
     Runtime(String),
     Parse(String),
+    Resolver(String),
     Return(super::token::Object),
 }
 
@@ -87,7 +93,7 @@ impl Display for ErrorKind {
             InvalidAssignmentTarget => "Invalid assignment target",
             OperandMustBeNumber => "Operand must be a number",
             OperandsMustBeSameType => "Operands must be two numbers or two strings",
-            Runtime(message) | Parse(message) => message,
+            Runtime(message) | Parse(message) | Resolver(message) => message,
             Return(_) => unreachable!("Return shouldn't be an error"),
         };
         write!(f, "{text}")

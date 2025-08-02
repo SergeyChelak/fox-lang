@@ -165,7 +165,7 @@ define_ast!(
         Var(
             VarStmt {
                 name: Token,
-                initializer: Box<Expression>,
+                initializer: Option<Box<Expression>>,
             }
         ) init: var, visit: visit_var,
 

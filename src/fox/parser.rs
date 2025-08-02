@@ -85,9 +85,10 @@ impl<'l> Parser<'l> {
         let name = self.consume_token(TokenType::Identifier, "Expect variable name")?;
 
         let initializer = if self.matches(&[TokenType::Equal]) {
-            self.expression()?
+            let expr = self.expression()?;
+            Some(Box::new(expr))
         } else {
-            Expression::literal(Object::Nil)
+            None
         };
 
         self.consume_token(
@@ -95,7 +96,7 @@ impl<'l> Parser<'l> {
             "Expected ';' after variable declaration",
         )?;
 
-        Ok(Statement::var(name, Box::new(initializer)))
+        Ok(Statement::var(name, initializer))
     }
 
     fn statement(&mut self) -> FoxResult<Statement> {

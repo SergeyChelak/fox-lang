@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::fox::{
     ErrorKind, FoxError, FoxResult, Object, TokenType,
     ast::*,
@@ -7,6 +9,7 @@ use crate::fox::{
 
 pub struct Interpreter {
     environment: SharedEnvironmentPtr,
+    locals: HashMap<Expression, usize>,
 }
 
 impl Interpreter {
@@ -15,7 +18,10 @@ impl Interpreter {
         // register builtin functions
         env.define("clock", Object::Callee(Func::clock()));
         let environment = env.shared_ptr();
-        Self { environment }
+        Self {
+            environment,
+            locals: HashMap::new(),
+        }
     }
 
     pub fn interpret(&mut self, statements: &[Statement]) -> FoxResult<()> {
@@ -81,6 +87,10 @@ impl Interpreter {
             };
         }
         Ok(Object::Nil)
+    }
+
+    pub fn resolve(&mut self, expr: &Expression, depth: usize) -> FoxResult<()> {
+        todo!()
     }
 }
 
@@ -206,7 +216,12 @@ impl StatementVisitor<()> for Interpreter {
     }
 
     fn visit_var(&mut self, data: &VarStmt) -> FoxResult<()> {
-        let value = self.evaluate(&data.initializer)?;
+        let value = if let Some(init) = &data.initializer {
+            self.evaluate(init)?
+        } else {
+            Object::Nil
+        };
+
         self.environment
             .borrow_mut()
             .define(&data.name.lexeme, value);
