@@ -55,7 +55,7 @@ impl<'l> Resolver<'l> {
         expr.accept(self)
     }
 
-    fn resolve_local(&mut self, expr: &Expression, name: &Token) -> FoxResult<()> {
+    fn resolve_local(&mut self, expr: Expression, name: &Token) -> FoxResult<()> {
         for (i, scope) in self.scopes.iter().enumerate().rev() {
             if scope.contains_key(&name.lexeme) {
                 self.interpreter.resolve(expr, self.scopes.len() - i - 1)?;
@@ -81,7 +81,7 @@ impl<'l> ExpressionVisitor<()> for Resolver<'l> {
     fn visit_assign(&mut self, data: &AssignExpr) -> FoxResult<()> {
         self.resolve_expr(&data.value)?;
         let expr = Expression::Assign(data.clone());
-        self.resolve_local(&expr, &data.name)
+        self.resolve_local(expr, &data.name)
     }
 
     fn visit_binary(&mut self, data: &BinaryExpr) -> FoxResult<()> {
@@ -128,7 +128,7 @@ impl<'l> ExpressionVisitor<()> for Resolver<'l> {
             return Err(err);
         }
         let expr = Expression::Variable(data.clone());
-        self.resolve_local(&expr, &data.name)
+        self.resolve_local(expr, &data.name)
     }
 }
 

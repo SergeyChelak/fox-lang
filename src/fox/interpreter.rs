@@ -9,6 +9,7 @@ use crate::fox::{
 
 pub struct Interpreter {
     environment: SharedEnvironmentPtr,
+    globals: SharedEnvironmentPtr,
     locals: HashMap<Expression, usize>,
 }
 
@@ -17,9 +18,11 @@ impl Interpreter {
         let mut env = Environment::new();
         // register builtin functions
         env.define("clock", Object::Callee(Func::clock()));
-        let environment = env.shared_ptr();
+        let ptr = env.shared_ptr();
+
         Self {
-            environment,
+            environment: ptr.clone(),
+            globals: ptr,
             locals: HashMap::new(),
         }
     }
@@ -89,7 +92,9 @@ impl Interpreter {
         Ok(Object::Nil)
     }
 
-    pub fn resolve(&mut self, expr: &Expression, depth: usize) -> FoxResult<()> {
+    pub fn resolve(&mut self, expr: Expression, depth: usize) -> FoxResult<()> {
+        // self.locals.insert(expr, depth);
+        // Ok(())
         todo!()
     }
 }
