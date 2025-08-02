@@ -3,6 +3,7 @@ mod environment;
 mod error;
 mod interpreter;
 mod parser;
+mod resolver;
 mod scanner;
 mod token;
 
@@ -11,7 +12,7 @@ use parser::*;
 use scanner::*;
 use token::*;
 
-use crate::fox::interpreter::Interpreter;
+use crate::fox::{interpreter::Interpreter, resolver::Resolver};
 
 pub type Source = [char];
 
@@ -36,6 +37,9 @@ impl Fox {
         let statements = parser.parse()?;
 
         let mut interpreter = Interpreter::new();
+
+        let mut resolver = Resolver::with(&mut interpreter);
+
         interpreter.interpret(&statements)
     }
 
