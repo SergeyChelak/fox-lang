@@ -14,7 +14,7 @@ macro_rules! define_ast {
             $(,)?
         }
     ) => {
-        #[derive(Debug, Clone)]
+        #[derive(Debug, Clone, Hash, Eq, PartialEq)]
         pub enum $holder_type {
             $($option($option_data),)*
         }
@@ -40,7 +40,7 @@ macro_rules! define_ast {
         }
 
         $(
-            #[derive(Debug, Clone)]
+            #[derive(Debug, Clone, Hash, Eq, PartialEq)]
             pub struct $option_data {
                 $(pub $p_name: $p_type,)*
             }
@@ -157,7 +157,7 @@ define_ast!(
 
         Return(
             ReturnStmt {
-                // keyword: Token,
+                keyword: Token,
                 value: Option<Box<Expression>>,
             }
         ) init: ret_fn, visit: visit_return,

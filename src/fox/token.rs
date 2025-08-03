@@ -1,12 +1,12 @@
 use std::{
-    cmp::Ordering,
     fmt::Display,
+    rc::Rc,
     time::{SystemTime, UNIX_EPOCH},
 };
 
 use crate::fox::{ast::FunctionStmt, environment::SharedEnvironmentPtr};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub struct Token {
     pub token_type: TokenType,
     pub lexeme: String,
@@ -32,6 +32,54 @@ pub enum Func {
     },
 }
 
+impl std::hash::Hash for Func {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        use Func::*;
+        match self {
+            Builtin { body, arity } => {
+                0.hash(state);
+                body.hash(state);
+                arity.hash(state);
+            }
+            Declaration { decl, closure } => {
+                1.hash(state);
+                decl.hash(state);
+                closure.as_ptr().hash(state);
+            }
+        }
+    }
+}
+
+impl Eq for Func {}
+
+impl PartialEq for Func {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (
+                Self::Builtin {
+                    body: l_body,
+                    arity: l_arity,
+                },
+                Self::Builtin {
+                    body: r_body,
+                    arity: r_arity,
+                },
+            ) => std::ptr::fn_addr_eq(*l_body, *r_body) && l_arity == r_arity,
+            (
+                Self::Declaration {
+                    decl: l_decl,
+                    closure: l_closure,
+                },
+                Self::Declaration {
+                    decl: r_decl,
+                    closure: r_closure,
+                },
+            ) => l_decl == r_decl && Rc::ptr_eq(l_closure, r_closure),
+            _ => false,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum Object {
     Nil,
@@ -40,6 +88,33 @@ pub enum Object {
     Bool(bool),
     Callee(Func),
 }
+
+impl std::hash::Hash for Object {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        use Object::*;
+        match self {
+            Nil => 0.hash(state),
+            Double(val) => {
+                1.hash(state);
+                val.to_bits().hash(state);
+            }
+            Text(val) => {
+                2.hash(state);
+                val.hash(state);
+            }
+            Bool(val) => {
+                3.hash(state);
+                val.hash(state);
+            }
+            Callee(val) => {
+                4.hash(state);
+                val.hash(state);
+            }
+        }
+    }
+}
+
+impl std::cmp::Eq for Object {}
 
 impl Object {
     pub fn is_true(&self) -> bool {
@@ -56,13 +131,10 @@ impl PartialEq for Object {
         use Object::*;
         match (self, other) {
             (Nil, Nil) => true,
-            (Double(l), Double(r)) => l.partial_cmp(r) == Some(Ordering::Equal),
+            (Double(l), Double(r)) => l == r,
             (Text(l), Text(r)) => l == r,
             (Bool(l), Bool(r)) => l == r,
-            (Callee(_), Callee(_)) => {
-                println!("[WARN] Callee comparison isn't implemented");
-                false
-            }
+            (Callee(l), Callee(r)) => l == r,
             _ => false,
         }
     }
@@ -116,7 +188,7 @@ impl Func {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum TokenType {
     // single-character tokens
     LeftParenthesis,
@@ -164,7 +236,7 @@ pub enum TokenType {
     Eof,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Hash, Eq, PartialEq)]
 pub struct CodeLocation {
     line: usize,
     abs_position: usize,

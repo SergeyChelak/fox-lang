@@ -4,7 +4,7 @@ use crate::fox::{
     ErrorKind, FoxError, FoxResult, Object, TokenType,
     ast::*,
     environment::{Environment, SharedEnvironmentPtr},
-    token::Func,
+    token::{Func, Token},
 };
 
 pub struct Interpreter {
@@ -93,9 +93,16 @@ impl Interpreter {
     }
 
     pub fn resolve(&mut self, expr: Expression, depth: usize) -> FoxResult<()> {
-        // self.locals.insert(expr, depth);
-        // Ok(())
-        todo!()
+        self.locals.insert(expr, depth);
+        Ok(())
+    }
+
+    fn look_up_variable(&self, name: &Token, expr: Expression) -> FoxResult<Object> {
+        if let Some(distance) = self.locals.get(&expr) {
+            self.environment.borrow().get_at(*distance, &name.lexeme)
+        } else {
+            self.globals.borrow().get(name)
+        }
     }
 }
 
@@ -163,14 +170,22 @@ impl ExpressionVisitor<Object> for Interpreter {
     }
 
     fn visit_variable(&mut self, data: &VariableExpr) -> FoxResult<Object> {
-        self.environment.borrow().get(&data.name)
+        let expr = Expression::Variable(data.clone());
+        self.look_up_variable(&data.name, expr)
     }
 
     fn visit_assign(&mut self, data: &AssignExpr) -> FoxResult<Object> {
         let value = self.evaluate(&data.value)?;
-        self.environment
-            .borrow_mut()
-            .assign(&data.name, value.clone())?;
+        let expr = Expression::Assign(data.clone());
+        if let Some(distance) = self.locals.get(&expr) {
+            self.environment
+                .borrow_mut()
+                .assign_at(*distance, &data.name, value.clone())?;
+        } else {
+            self.globals
+                .borrow_mut()
+                .assign(&data.name, value.clone())?;
+        }
         Ok(value)
     }
 

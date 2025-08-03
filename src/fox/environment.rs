@@ -69,4 +69,59 @@ impl Environment {
         };
         Ok(obj)
     }
+
+    pub fn get_at(&self, distance: usize, name: &str) -> FoxResult<Object> {
+        let value = if distance == 0 {
+            self.values.get(name).cloned()
+        } else {
+            let enclosing = self.traverse_enclosing(distance)?;
+            enclosing.borrow().values.get(name).cloned()
+        };
+        let Some(obj) = value else {
+            let err = FoxError::resolver(None, "Object not found");
+            return Err(err);
+        };
+        Ok(obj)
+    }
+
+    pub fn assign_at(&mut self, distance: usize, name: &Token, value: Object) -> FoxResult<()> {
+        let insert_data =
+            |map: &mut HashMap<String, Object>| map.insert(name.lexeme.clone(), value);
+
+        if distance == 0 {
+            insert_data(&mut self.values);
+        } else {
+            let enclosing = self.traverse_enclosing(distance)?;
+            let mut map = &mut enclosing.borrow_mut().values;
+            insert_data(&mut map);
+        }
+        Ok(())
+    }
+
+    fn traverse_enclosing(&self, depth: usize) -> FoxResult<SharedEnvironmentPtr> {
+        if depth == 0 {
+            let err = FoxError::resolver(
+                None,
+                "Zero depth isn't applicable for ancestor environments",
+            );
+            return Err(err);
+        }
+        let mut ptr = self.enclosing.clone();
+        for _ in 1..depth {
+            let Some(current) = ptr else {
+                let err = FoxError::resolver(None, "Invalid depth: Ancestor environment not found");
+                return Err(err);
+            };
+            ptr = current.borrow().enclosing.clone();
+        }
+
+        let Some(env) = ptr else {
+            let err = FoxError::resolver(
+                None,
+                "Invalid depth: Environment at specified distance not found",
+            );
+            return Err(err);
+        };
+        Ok(env)
+    }
 }

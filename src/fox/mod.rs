@@ -29,16 +29,13 @@ impl Fox {
         let mut scanner = Scanner::with_source(&self.code);
         let tokens = scanner.scan_tokens()?;
 
-        // for token in tokens.iter() {
-        //     println!("{token:?}");
-        // }
-
         let mut parser = Parser::new(&tokens);
         let statements = parser.parse()?;
 
         let mut interpreter = Interpreter::new();
 
         let mut resolver = Resolver::with(&mut interpreter);
+        resolver.resolve_statements(&statements)?;
 
         interpreter.interpret(&statements)
     }

@@ -123,14 +123,14 @@ impl<'l> Parser<'l> {
     }
 
     fn return_statement(&mut self) -> FoxResult<Statement> {
-        // let keyword = self.force_previous_token()?;
+        let keyword = self.force_previous_token()?;
         let mut value = None;
         if !self.check_type(&TokenType::Semicolon) {
             let expr = self.expression()?;
             value = Some(Box::new(expr));
         }
         self.consume_token(TokenType::Semicolon, "Expect ';' after return value")?;
-        Ok(Statement::ret_fn(value))
+        Ok(Statement::ret_fn(keyword, value))
     }
 
     fn for_statement(&mut self) -> FoxResult<Statement> {
