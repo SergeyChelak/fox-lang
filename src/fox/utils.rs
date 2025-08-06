@@ -1,5 +1,8 @@
-use std::{collections::HashMap, hash::Hash};
-
+use std::{cell::RefCell, collections::HashMap, hash::Hash, rc::Rc};
+/// Code location struct
+/// use to define token position inside input source code
+/// mostly used for formatting error messages
+///
 #[derive(Debug, Clone, Copy, Hash, Eq, PartialEq)]
 pub struct CodeLocation {
     line: usize,
@@ -28,11 +31,14 @@ impl Default for CodeLocation {
         }
     }
 }
+/// Type aliases
+///
+pub type SharedPtr<T> = Rc<RefCell<T>>;
 
 /// convention function to create mutable pointer
 ///
-pub fn mutable_cell<T>(value: T) -> std::rc::Rc<std::cell::RefCell<T>> {
-    std::rc::Rc::new(std::cell::RefCell::new(value))
+pub fn mutable_cell<T>(value: T) -> SharedPtr<T> {
+    Rc::new(RefCell::new(value))
 }
 
 /// Fill hash for map of <Hashable1: Hashable2>

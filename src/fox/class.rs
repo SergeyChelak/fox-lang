@@ -1,6 +1,14 @@
-use std::{cell::RefCell, collections::HashMap, fmt::Display, rc::Rc};
+use std::{collections::HashMap, fmt::Display, rc::Rc};
 
-use crate::fox::{FoxError, FoxResult, func::Func, object::*, token::Token, utils::fill_hash};
+pub const INITIALIZER_NAME: &str = "init";
+
+use crate::fox::{
+    FoxError, FoxResult,
+    func::Func,
+    object::*,
+    token::Token,
+    utils::{SharedPtr, fill_hash, mutable_cell},
+};
 
 /// MetaClass (functions)
 ///
@@ -10,12 +18,38 @@ pub struct MetaClass {
     methods: HashMap<String, Func>,
 }
 
+pub struct Constructor {
+    pub initializer: Option<Func>,
+    pub instance: SharedPtr<ClassInstance>,
+}
+
 impl MetaClass {
+    pub fn constructor(meta: Rc<Self>) -> Constructor {
+        let instance = ClassInstance::new(meta.clone());
+        let instance = mutable_cell(instance);
+        let initializer = if let Some(init) = meta.find_method(INITIALIZER_NAME) {
+            Some(init.bind(instance.clone()))
+        } else {
+            None
+        };
+        Constructor {
+            initializer,
+            instance,
+        }
+    }
+
     pub fn new(name: &str, methods: HashMap<String, Func>) -> Self {
         Self {
             name: name.to_string(),
             methods,
         }
+    }
+
+    pub fn arity(&self) -> usize {
+        let Some(method) = self.find_method(INITIALIZER_NAME) else {
+            return 0;
+        };
+        method.arity()
     }
 
     fn find_method(&self, name: &str) -> Option<Func> {
@@ -52,7 +86,7 @@ impl ClassInstance {
         }
     }
 
-    pub fn get(instance_ref: Rc<RefCell<Self>>, name: &Token) -> FoxResult<Object> {
+    pub fn get(instance_ref: SharedPtr<Self>, name: &Token) -> FoxResult<Object> {
         let lexeme = &name.lexeme;
         if let Some(obj) = instance_ref.borrow().fields.get(lexeme).cloned() {
             return Ok(obj);

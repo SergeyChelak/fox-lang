@@ -3,10 +3,9 @@ use std::{collections::HashMap, rc::Rc};
 use crate::fox::{
     ErrorKind, FoxError, FoxResult, Object, TokenType,
     ast::*,
-    class::{ClassInstance, MetaClass},
+    class::{ClassInstance, INITIALIZER_NAME, MetaClass},
     environment::{Environment, SharedEnvironmentPtr},
     func::*,
-    mutable_cell,
     token::Token,
 };
 
@@ -217,8 +216,12 @@ impl ExpressionVisitor<Object> for Interpreter {
                 self.func_execute(&func, &args)
             }
             Object::Class(meta) => {
-                let obj = ClassInstance::new(meta.clone());
-                Ok(Object::Instance(mutable_cell(obj)))
+                self.func_arity_check(&data.paren, meta.arity(), &args)?;
+                let constructor = MetaClass::constructor(meta);
+                if let Some(func) = constructor.initializer {
+                    self.func_execute(&func, &args)?;
+                }
+                Ok(Object::Instance(constructor.instance))
             }
             _ => Err(FoxError::runtime(
                 Some(data.paren.clone()),
@@ -306,10 +309,7 @@ impl StatementVisitor<()> for Interpreter {
     }
 
     fn visit_function(&mut self, data: &FunctionStmt) -> FoxResult<()> {
-        let object = Func {
-            decl: Rc::new(data.clone()),
-            closure: self.environment.clone(),
-        };
+        let object = Func::new(Rc::new(data.clone()), self.environment.clone(), false);
         self.environment
             .borrow_mut()
             .define(&data.name.lexeme, Object::Callee(object));
@@ -338,10 +338,11 @@ impl StatementVisitor<()> for Interpreter {
                 );
                 return Err(err);
             };
-            let method = Func {
-                decl: Rc::new(func.clone()),
-                closure: self.environment.clone(),
-            };
+            let method = Func::new(
+                Rc::new(func.clone()),
+                self.environment.clone(),
+                func.name.lexeme == INITIALIZER_NAME,
+            );
             methods.insert(func.name.lexeme.clone(), method);
         }
         let class_data = MetaClass::new(&data.name.lexeme, methods);

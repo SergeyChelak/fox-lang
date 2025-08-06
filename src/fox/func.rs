@@ -76,13 +76,15 @@ impl BuiltinFunc {
 pub struct Func {
     pub decl: Rc<FunctionStmt>,
     pub closure: SharedEnvironmentPtr,
+    pub is_initializer: bool,
 }
 
 impl Debug for Func {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Dec func")
+        f.debug_struct("Decl func")
             // .field("decl", &self.decl)
             // .field("closure", &self.closure)
+            .field("is_initializer", &self.is_initializer)
             .finish()
     }
 }
@@ -91,6 +93,7 @@ impl std::hash::Hash for Func {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.decl.hash(state);
         self.closure.as_ptr().hash(state);
+        self.is_initializer.hash(state);
     }
 }
 
@@ -98,17 +101,32 @@ impl Eq for Func {}
 
 impl PartialEq for Func {
     fn eq(&self, other: &Self) -> bool {
-        self.decl == other.decl && Rc::ptr_eq(&self.closure, &other.closure)
+        self.decl == other.decl
+            && Rc::ptr_eq(&self.closure, &other.closure)
+            && self.is_initializer == other.is_initializer
     }
 }
 
 impl Display for Func {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "<fun ({} args)>", self.arity())
+        let id = if self.is_initializer { "init" } else { "fun" };
+        write!(f, "<{id} ({} args)>", self.arity())
     }
 }
 
 impl Func {
+    pub fn new(
+        decl: Rc<FunctionStmt>,
+        closure: SharedEnvironmentPtr,
+        is_initializer: bool,
+    ) -> Self {
+        Self {
+            decl,
+            closure,
+            is_initializer,
+        }
+    }
+
     pub fn arity(&self) -> usize {
         self.decl.params.len()
     }
@@ -119,6 +137,7 @@ impl Func {
         Func {
             decl: self.decl.clone(),
             closure: env.shared_ptr(),
+            is_initializer: self.is_initializer,
         }
     }
 }

@@ -1,10 +1,9 @@
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::collections::HashMap;
 
-use crate::fox::{FoxError, FoxResult, mutable_cell, token::Token};
+use crate::fox::{FoxError, FoxResult, mutable_cell, token::Token, utils::SharedPtr};
 
 use super::Object;
 
-pub type SharedPtr<T> = Rc<RefCell<T>>;
 pub type SharedEnvironmentPtr = SharedPtr<Environment>;
 
 #[derive(Debug)]
