@@ -3,10 +3,11 @@ use std::collections::HashMap;
 use crate::fox::{
     ErrorKind, FoxError, FoxResult, Object, TokenType,
     ast::*,
+    class::{ClassInstance, MetaClass},
     environment::{Environment, SharedEnvironmentPtr},
     func::*,
     mutable_cell,
-    token::{ClassInstance, MetaClass, Token},
+    token::Token,
 };
 
 pub struct Interpreter {
