@@ -1,17 +1,25 @@
 use std::{collections::HashMap, fmt::Display, rc::Rc};
 
-use crate::fox::{FoxError, FoxResult, object::*, token::Token};
+use crate::fox::{FoxError, FoxResult, func::Func, object::*, token::Token, utils::fill_hash};
 
-#[derive(Debug, Clone, Hash)]
+/// MetaClass (functions)
+///
+#[derive(Debug, Clone)]
 pub struct MetaClass {
     name: String,
+    methods: HashMap<String, Func>,
 }
 
 impl MetaClass {
-    pub fn new(name: &str) -> Self {
+    pub fn new(name: &str, methods: HashMap<String, Func>) -> Self {
         Self {
             name: name.to_string(),
+            methods,
         }
+    }
+
+    fn find_method(&self, name: &str) -> Option<Func> {
+        self.methods.get(name).cloned()
     }
 }
 
@@ -21,6 +29,15 @@ impl Display for MetaClass {
     }
 }
 
+impl std::hash::Hash for MetaClass {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.name.hash(state);
+        fill_hash(&self.methods, state);
+    }
+}
+
+/// Class instance (data only)
+///
 #[derive(Debug, Clone)]
 pub struct ClassInstance {
     meta_class_ref: Rc<MetaClass>,
@@ -37,14 +54,19 @@ impl ClassInstance {
 
     pub fn get(&self, name: &Token) -> FoxResult<Object> {
         let lexeme = &name.lexeme;
-        let Some(obj) = self.fields.get(lexeme).cloned() else {
-            let err = FoxError::runtime(
-                Some(name.clone()),
-                &format!("Undefined property '{lexeme}'"),
-            );
-            return Err(err);
+        if let Some(obj) = self.fields.get(lexeme).cloned() {
+            return Ok(obj);
         };
-        Ok(obj)
+
+        if let Some(method) = self.meta_class_ref.find_method(&name.lexeme) {
+            return Ok(Object::Callee(method));
+        }
+
+        let err = FoxError::runtime(
+            Some(name.clone()),
+            &format!("Undefined property '{lexeme}'"),
+        );
+        Err(err)
     }
 
     pub fn set(&mut self, name: &Token, value: Object) {
@@ -55,12 +77,7 @@ impl ClassInstance {
 impl std::hash::Hash for ClassInstance {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.meta_class_ref.hash(state);
-        let mut keys: Vec<_> = self.fields.keys().collect();
-        keys.sort();
-        for key in keys {
-            key.hash(state);
-            self.fields[key].hash(state);
-        }
+        fill_hash(&self.fields, state);
     }
 }
 

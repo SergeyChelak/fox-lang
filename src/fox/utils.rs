@@ -1,3 +1,5 @@
+use std::{collections::HashMap, hash::Hash};
+
 #[derive(Debug, Clone, Copy, Hash, Eq, PartialEq)]
 pub struct CodeLocation {
     line: usize,
@@ -27,8 +29,24 @@ impl Default for CodeLocation {
     }
 }
 
-///
+/// convention function to create mutable pointer
 ///
 pub fn mutable_cell<T>(value: T) -> std::rc::Rc<std::cell::RefCell<T>> {
     std::rc::Rc::new(std::cell::RefCell::new(value))
+}
+
+/// Fill hash for map of <Hashable1: Hashable2>
+///
+pub fn fill_hash<H, K, V>(map: &HashMap<K, V>, state: &mut H)
+where
+    H: std::hash::Hasher,
+    K: Hash + Ord,
+    V: Hash,
+{
+    let mut keys: Vec<_> = map.keys().collect();
+    keys.sort();
+    for key in keys {
+        key.hash(state);
+        map[key].hash(state);
+    }
 }

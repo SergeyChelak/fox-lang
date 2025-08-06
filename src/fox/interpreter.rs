@@ -324,8 +324,22 @@ impl StatementVisitor<()> for Interpreter {
         self.environment
             .borrow_mut()
             .define(&data.name.lexeme, Object::Nil);
-        todo!();
-        let class_data = MetaClass::new(&data.name.lexeme);
+        let mut methods = HashMap::new();
+        for stmt in &data.methods {
+            let Statement::Function(func) = stmt else {
+                let err = FoxError::runtime(
+                    None,
+                    "[Interpreter] Non function statement found in class. Possible bug in Fox implementation",
+                );
+                return Err(err);
+            };
+            let method = Func {
+                decl: Box::new(func.clone()),
+                closure: self.environment.clone(),
+            };
+            methods.insert(func.name.lexeme.clone(), method);
+        }
+        let class_data = MetaClass::new(&data.name.lexeme, methods);
         let class = Object::Class(std::rc::Rc::new(class_data));
         self.environment.borrow_mut().assign(&data.name, class)
     }

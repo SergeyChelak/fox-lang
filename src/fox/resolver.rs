@@ -227,7 +227,7 @@ impl<'l> StatementVisitor<()> for Resolver<'l> {
             let Statement::Function(func) = method else {
                 let err = FoxError::runtime(
                     None,
-                    "Non function statement found in class. Possible bug in Fox implemetation",
+                    "[Resolver] Non function statement found in class. Possible bug in Fox implementation",
                 );
                 return Err(err);
             };
