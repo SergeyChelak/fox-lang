@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use crate::fox::{Source, Token};
+use crate::fox::{Object, Source, Token};
 
 use super::CodeLocation;
 
@@ -77,7 +77,7 @@ pub enum ErrorKind {
     Runtime(String),
     Parse(String),
     Resolver(String),
-    Return(super::token::Object),
+    Return(Object),
 }
 
 impl Display for ErrorKind {

@@ -4,12 +4,14 @@ mod environment;
 mod error;
 mod func;
 mod interpreter;
+mod object;
 mod parser;
 mod resolver;
 mod scanner;
 mod token;
 
 pub use error::*;
+use object::*;
 use parser::*;
 use scanner::*;
 use token::*;

@@ -1,9 +1,6 @@
 use std::{collections::HashMap, fmt::Display, rc::Rc};
 
-use crate::fox::{
-    FoxError, FoxResult,
-    token::{Object, Token},
-};
+use crate::fox::{FoxError, FoxResult, object::*, token::Token};
 
 #[derive(Debug, Clone, Hash)]
 pub struct MetaClass {

@@ -4,9 +4,9 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
+use crate::fox::Object;
 use crate::fox::ast::FunctionStmt;
 use crate::fox::environment::SharedEnvironmentPtr;
-use crate::fox::token::Object;
 
 /// Builtin function definition
 ///
