@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
-use crate::fox::{FoxError, FoxResult, ast::*, interpreter::Interpreter, token::Token};
+use crate::fox::{
+    FoxError, FoxResult, ast::*, class::INITIALIZER_NAME, interpreter::Interpreter, token::Token,
+};
 
 type Scope = HashMap<String, bool>;
 
@@ -8,6 +10,7 @@ type Scope = HashMap<String, bool>;
 enum FuncType {
     None,
     Func,
+    Initializer,
     Method,
 }
 
@@ -225,6 +228,12 @@ impl<'l> StatementVisitor<()> for Resolver<'l> {
             return Err(err);
         }
         if let Some(value) = &data.value {
+            if matches!(self.current_function, FuncType::Initializer) {
+                return Err(FoxError::runtime(
+                    Some(data.keyword.clone()),
+                    "Can't return a value from an initializer",
+                ));
+            }
             self.resolve_expr(value)?;
         }
         Ok(())
@@ -261,7 +270,10 @@ impl<'l> StatementVisitor<()> for Resolver<'l> {
                 );
                 return Err(err);
             };
-            let decl = FuncType::Method;
+            let mut decl = FuncType::Method;
+            if func.name.lexeme == INITIALIZER_NAME {
+                decl = FuncType::Initializer;
+            }
             self.resolve_function(func, decl)?;
         }
         self.end_scope();

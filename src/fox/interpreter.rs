@@ -84,9 +84,16 @@ impl Interpreter {
         let result = self.execute_block(&func.decl.body, env);
         if let Err(err) = result {
             return match err.kind() {
+                ErrorKind::Return(_) if func.is_initializer => {
+                    func.closure.borrow().get_at(0, "this")
+                }
                 ErrorKind::Return(value) => Ok(value.clone()),
                 _ => Err(err),
             };
+        }
+
+        if func.is_initializer {
+            return func.closure.borrow().get_at(0, "this");
         }
         Ok(Object::Nil)
     }
