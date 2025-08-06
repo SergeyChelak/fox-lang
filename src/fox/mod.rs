@@ -9,12 +9,14 @@ mod parser;
 mod resolver;
 mod scanner;
 mod token;
+mod utils;
 
 pub use error::*;
 use object::*;
 use parser::*;
 use scanner::*;
 use token::*;
+use utils::*;
 
 use crate::fox::{interpreter::Interpreter, resolver::Resolver};
 
@@ -60,8 +62,4 @@ impl Fox {
 
         text
     }
-}
-
-fn mutable_cell<T>(value: T) -> std::rc::Rc<std::cell::RefCell<T>> {
-    std::rc::Rc::new(std::cell::RefCell::new(value))
 }
