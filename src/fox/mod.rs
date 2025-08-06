@@ -20,6 +20,8 @@ use utils::*;
 
 use crate::fox::{interpreter::Interpreter, resolver::Resolver};
 
+const KEYWORD_THIS: &str = "this";
+
 pub type Source = [char];
 
 pub struct Fox {

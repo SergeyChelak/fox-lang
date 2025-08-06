@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 
 use crate::fox::{
-    FoxError, FoxResult, ast::*, class::INITIALIZER_NAME, interpreter::Interpreter, token::Token,
+    FoxError, FoxResult, KEYWORD_THIS, ast::*, class::INITIALIZER_NAME, interpreter::Interpreter,
+    token::Token,
 };
 
 type Scope = HashMap<String, bool>;
@@ -260,7 +261,7 @@ impl<'l> StatementVisitor<()> for Resolver<'l> {
         self.define(&data.name);
 
         self.begin_scope();
-        self.define_by_lexeme("this");
+        self.define_by_lexeme(KEYWORD_THIS);
 
         for method in &data.methods {
             let Statement::Function(func) = method else {

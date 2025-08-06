@@ -5,10 +5,10 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use crate::fox::Object;
 use crate::fox::ast::FunctionStmt;
 use crate::fox::class::ClassInstance;
 use crate::fox::environment::{Environment, SharedEnvironmentPtr};
+use crate::fox::{KEYWORD_THIS, Object};
 
 /// Builtin function definition
 ///
@@ -133,7 +133,7 @@ impl Func {
 
     pub fn bind(&self, instance: Rc<RefCell<ClassInstance>>) -> Func {
         let mut env = Environment::with(Some(self.closure.clone()));
-        env.define("this", Object::Instance(instance));
+        env.define(KEYWORD_THIS, Object::Instance(instance));
         Func {
             decl: self.decl.clone(),
             closure: env.shared_ptr(),

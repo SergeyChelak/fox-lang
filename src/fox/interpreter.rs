@@ -1,7 +1,7 @@
 use std::{collections::HashMap, rc::Rc};
 
 use crate::fox::{
-    ErrorKind, FoxError, FoxResult, Object, TokenType,
+    ErrorKind, FoxError, FoxResult, KEYWORD_THIS, Object, TokenType,
     ast::*,
     class::{ClassInstance, INITIALIZER_NAME, MetaClass},
     environment::{Environment, SharedEnvironmentPtr},
@@ -85,7 +85,7 @@ impl Interpreter {
         if let Err(err) = result {
             return match err.kind() {
                 ErrorKind::Return(_) if func.is_initializer => {
-                    func.closure.borrow().get_at(0, "this")
+                    func.closure.borrow().get_at(0, KEYWORD_THIS)
                 }
                 ErrorKind::Return(value) => Ok(value.clone()),
                 _ => Err(err),
@@ -93,7 +93,7 @@ impl Interpreter {
         }
 
         if func.is_initializer {
-            return func.closure.borrow().get_at(0, "this");
+            return func.closure.borrow().get_at(0, KEYWORD_THIS);
         }
         Ok(Object::Nil)
     }
