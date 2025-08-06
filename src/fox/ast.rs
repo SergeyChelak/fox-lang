@@ -121,11 +121,18 @@ define_ast!(
 
 define_ast!(
     Statement accepting StatementVisitor {
-        Block (
+        Block(
             BlockStmt {
                 statements: Vec<Statement>,
             }
         ) init: block, visit: visit_block,
+
+        Class(
+            ClassStmt {
+                name: Token,
+                methods: Vec<Statement>,
+            }
+        ) init: class, visit: visit_class,
 
         Expression(
             ExpressionStmt {

@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::HashMap, fmt::Debug, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::fox::{FoxError, FoxResult, token::Token};
 
@@ -92,8 +92,8 @@ impl Environment {
             insert_data(&mut self.values);
         } else {
             let enclosing = self.traverse_enclosing(distance)?;
-            let mut map = &mut enclosing.borrow_mut().values;
-            insert_data(&mut map);
+            let map = &mut enclosing.borrow_mut().values;
+            insert_data(map);
         }
         Ok(())
     }

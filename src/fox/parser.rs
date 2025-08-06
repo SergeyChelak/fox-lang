@@ -43,6 +43,9 @@ impl<'l> Parser<'l> {
     }
 
     fn declaration(&mut self) -> FoxResult<Statement> {
+        if self.matches(&[TokenType::Class]) {
+            return self.class();
+        }
         if self.matches(&[TokenType::Fun]) {
             return self.function("function");
         }
@@ -50,6 +53,21 @@ impl<'l> Parser<'l> {
             return self.var_declaration();
         }
         self.statement()
+    }
+
+    fn class(&mut self) -> FoxResult<Statement> {
+        let name = self.consume_token(TokenType::Identifier, "Expect class name")?;
+        self.consume_token(TokenType::LeftBrace, "Expect '{' before class body")?;
+
+        let mut methods = Vec::new();
+        while !self.check_type(&TokenType::RightBrace) && !self.is_at_end() {
+            let func = self.function("method")?;
+            methods.push(func);
+        }
+
+        self.consume_token(TokenType::RightBrace, "Expect '}' after class body")?;
+
+        Ok(Statement::class(name, methods))
     }
 
     fn function(&mut self, kind: &str) -> FoxResult<Statement> {

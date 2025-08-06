@@ -4,7 +4,7 @@ use crate::fox::{
     ErrorKind, FoxError, FoxResult, Object, TokenType,
     ast::*,
     environment::{Environment, SharedEnvironmentPtr},
-    token::{Func, Token},
+    token::{ClassInstance, Func, MetaClass, Token},
 };
 
 pub struct Interpreter {
@@ -60,7 +60,13 @@ impl Interpreter {
         result
     }
 
-    fn call(&mut self, func: &Func, args: &[Object]) -> FoxResult<Object> {
+    fn func_call(&mut self, token: &Token, func: &Func, args: &[Object]) -> FoxResult<Object> {
+        let arity = func.arity();
+        if args.len() != arity {
+            let msg = format!("Expected {}  arguments but got {}", arity, args.len());
+            return Err(FoxError::runtime(Some(token.clone()), &msg));
+        }
+
         match func {
             Func::Builtin { body, .. } => Ok(body(args)),
             Func::Declaration { decl, closure } => self.execute_func(decl, closure.clone(), args),
@@ -200,26 +206,25 @@ impl ExpressionVisitor<Object> for Interpreter {
     }
 
     fn visit_call(&mut self, data: &CallExpr) -> FoxResult<Object> {
-        let Object::Callee(func) = self.evaluate(&data.callee)? else {
-            return Err(FoxError::runtime(
+        let eval = self.evaluate(&data.callee)?;
+        match eval {
+            Object::Callee(func) => {
+                let mut args = Vec::new();
+                for arg in &data.arguments {
+                    let expr = self.evaluate(arg)?;
+                    args.push(expr);
+                }
+                self.func_call(&data.paren, &func, &args)
+            }
+            Object::Class(meta) => {
+                let obj = ClassInstance::new(meta.clone());
+                Ok(Object::Instance(obj))
+            }
+            _ => Err(FoxError::runtime(
                 Some(data.paren.clone()),
                 "Can only call functions and classes",
-            ));
-        };
-
-        let mut args = Vec::new();
-        for arg in &data.arguments {
-            let expr = self.evaluate(arg)?;
-            args.push(expr);
+            )),
         }
-
-        let arity = func.arity();
-        if args.len() != arity {
-            let msg = format!("Expected {}  arguments but got {}", arity, args.len());
-            return Err(FoxError::runtime(Some(data.paren.clone()), &msg));
-        }
-
-        self.call(&func, &args)
     }
 }
 
@@ -288,6 +293,15 @@ impl StatementVisitor<()> for Interpreter {
             Object::Nil
         };
         Err(FoxError::error(ErrorKind::Return(value)))
+    }
+
+    fn visit_class(&mut self, data: &ClassStmt) -> FoxResult<()> {
+        self.environment
+            .borrow_mut()
+            .define(&data.name.lexeme, Object::Nil);
+        let class_data = MetaClass::new(&data.name.lexeme);
+        let class = Object::Class(std::rc::Rc::new(class_data));
+        self.environment.borrow_mut().assign(&data.name, class)
     }
 }
 

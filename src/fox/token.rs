@@ -1,5 +1,5 @@
 use std::{
-    fmt::Display,
+    fmt::{Debug, Display},
     rc::Rc,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -20,10 +20,12 @@ impl Token {
     }
 }
 
-#[derive(Debug, Clone)]
+pub type BuiltInFunction = dyn Fn(&[Object]) -> Object;
+
+#[derive(Clone)]
 pub enum Func {
     Builtin {
-        body: fn(&[Object]) -> Object,
+        body: Rc<BuiltInFunction>,
         arity: usize,
     },
     Declaration {
@@ -32,13 +34,25 @@ pub enum Func {
     },
 }
 
+impl Debug for Func {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Builtin { arity, .. } => f
+                .debug_struct("Builtin func")
+                .field("arity", arity)
+                .finish(),
+            Self::Declaration { .. } => f.debug_struct("Decl func").finish(),
+        }
+    }
+}
+
 impl std::hash::Hash for Func {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         use Func::*;
         match self {
             Builtin { body, arity } => {
                 0.hash(state);
-                body.hash(state);
+                Rc::as_ptr(body).hash(state);
                 arity.hash(state);
             }
             Declaration { decl, closure } => {
@@ -64,7 +78,7 @@ impl PartialEq for Func {
                     body: r_body,
                     arity: r_arity,
                 },
-            ) => std::ptr::fn_addr_eq(*l_body, *r_body) && l_arity == r_arity,
+            ) => Rc::ptr_eq(l_body, r_body) && l_arity == r_arity,
             (
                 Self::Declaration {
                     decl: l_decl,
@@ -80,13 +94,51 @@ impl PartialEq for Func {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash)]
+pub struct MetaClass {
+    name: String,
+}
+
+impl MetaClass {
+    pub fn new(name: &str) -> Self {
+        Self {
+            name: name.to_string(),
+        }
+    }
+}
+
+impl Display for MetaClass {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "meta class {}", self.name)
+    }
+}
+
+#[derive(Debug, Clone, Hash)]
+pub struct ClassInstance {
+    meta_class_ref: Rc<MetaClass>,
+}
+
+impl ClassInstance {
+    pub fn new(meta_class_ref: Rc<MetaClass>) -> Self {
+        Self { meta_class_ref }
+    }
+}
+
+impl Display for ClassInstance {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "class '{}'", self.meta_class_ref.name)
+    }
+}
+
+#[derive(Clone, Debug)]
 pub enum Object {
     Nil,
     Double(f32),
     Text(String),
     Bool(bool),
     Callee(Func),
+    Class(Rc<MetaClass>),
+    Instance(ClassInstance),
 }
 
 impl std::hash::Hash for Object {
@@ -108,6 +160,14 @@ impl std::hash::Hash for Object {
             }
             Callee(val) => {
                 4.hash(state);
+                val.hash(state);
+            }
+            Class(val) => {
+                5.hash(state);
+                val.hash(state);
+            }
+            Instance(val) => {
+                6.hash(state);
                 val.hash(state);
             }
         }
@@ -148,6 +208,8 @@ impl Display for Object {
             Self::Text(value) => write!(f, "{value}"),
             Self::Bool(value) => write!(f, "{value}"),
             Self::Callee(value) => write!(f, "{value}"),
+            Self::Class(value) => write!(f, "class {value}"),
+            Self::Instance(value) => write!(f, "instance of {value}"),
         }
     }
 }
@@ -173,7 +235,10 @@ impl Func {
             };
             Object::Double(duration.as_secs() as f32)
         };
-        Self::Builtin { body, arity: 0 }
+        Self::Builtin {
+            body: Rc::new(body),
+            arity: 0,
+        }
     }
 
     pub fn arity(&self) -> usize {

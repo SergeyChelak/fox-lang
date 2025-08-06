@@ -209,4 +209,10 @@ impl<'l> StatementVisitor<()> for Resolver<'l> {
         self.resolve_expr(&data.condition)?;
         self.resolve_stmt(&data.body)
     }
+
+    fn visit_class(&mut self, data: &ClassStmt) -> FoxResult<()> {
+        self.declare(&data.name)?;
+        self.define(&data.name);
+        Ok(())
+    }
 }
