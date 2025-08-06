@@ -133,7 +133,7 @@ impl ClassInstance {
         let Some(obj) = self.fields.get(lexeme).cloned() else {
             let err = FoxError::runtime(
                 Some(name.clone()),
-                &format!("Undefined property '{}'", lexeme),
+                &format!("Undefined property '{lexeme}'"),
             );
             return Err(err);
         };

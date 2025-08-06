@@ -26,7 +26,7 @@ impl FoxError {
         };
         Self {
             kind,
-            info: ErrorInfo::Token(token),
+            info: ErrorInfo::Token(Box::new(token)),
         }
     }
 
@@ -60,7 +60,7 @@ impl FoxError {
 pub enum ErrorInfo {
     Empty,
     Code(CodeLocation),
-    Token(Token),
+    Token(Box<Token>),
 }
 
 #[derive(Clone, Debug)]
