@@ -226,6 +226,15 @@ impl ExpressionVisitor<Object> for Interpreter {
             )),
         }
     }
+
+    fn visit_get(&mut self, data: &GetExpr) -> FoxResult<Object> {
+        let object = self.evaluate(&data.object)?;
+        let Object::Instance(instance) = object else {
+            let err = FoxError::runtime(Some(data.name.clone()), "Only instances have properties");
+            return Err(err);
+        };
+        instance.get(&data.name)
+    }
 }
 
 impl StatementVisitor<()> for Interpreter {

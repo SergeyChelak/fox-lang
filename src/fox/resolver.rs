@@ -148,6 +148,10 @@ impl<'l> ExpressionVisitor<()> for Resolver<'l> {
         let expr = Expression::Variable(data.clone());
         self.resolve_local(expr, &data.name)
     }
+
+    fn visit_get(&mut self, data: &GetExpr) -> FoxResult<()> {
+        self.resolve_expr(&data.object)
+    }
 }
 
 impl<'l> StatementVisitor<()> for Resolver<'l> {

@@ -1,10 +1,11 @@
 use std::{
+    collections::HashMap,
     fmt::{Debug, Display},
     rc::Rc,
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use crate::fox::{ast::FunctionStmt, environment::SharedEnvironmentPtr};
+use crate::fox::{FoxError, FoxResult, ast::FunctionStmt, environment::SharedEnvironmentPtr};
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub struct Token {
@@ -113,14 +114,42 @@ impl Display for MetaClass {
     }
 }
 
-#[derive(Debug, Clone, Hash)]
+#[derive(Debug, Clone)]
 pub struct ClassInstance {
     meta_class_ref: Rc<MetaClass>,
+    fields: HashMap<String, Object>,
 }
 
 impl ClassInstance {
     pub fn new(meta_class_ref: Rc<MetaClass>) -> Self {
-        Self { meta_class_ref }
+        Self {
+            meta_class_ref,
+            fields: HashMap::new(),
+        }
+    }
+
+    pub fn get(&self, name: &Token) -> FoxResult<Object> {
+        let lexeme = &name.lexeme;
+        let Some(obj) = self.fields.get(lexeme).cloned() else {
+            let err = FoxError::runtime(
+                Some(name.clone()),
+                &format!("Undefined property '{}'", lexeme),
+            );
+            return Err(err);
+        };
+        Ok(obj)
+    }
+}
+
+impl std::hash::Hash for ClassInstance {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.meta_class_ref.hash(state);
+        let mut keys: Vec<_> = self.fields.keys().collect();
+        keys.sort();
+        for key in keys {
+            key.hash(state);
+            self.fields[key].hash(state);
+        }
     }
 }
 

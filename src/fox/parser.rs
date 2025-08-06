@@ -352,8 +352,20 @@ impl<'l> Parser<'l> {
 
     fn call(&mut self) -> FoxResult<Expression> {
         let mut expr = self.primary()?;
-        while self.matches(&[TokenType::LeftParenthesis]) {
-            expr = self.finish_call(expr)?;
+        loop {
+            if self.matches(&[TokenType::LeftParenthesis]) {
+                expr = self.finish_call(expr)?;
+                continue;
+            }
+
+            if self.matches(&[TokenType::Dot]) {
+                let name =
+                    self.consume_token(TokenType::Identifier, "Expect property name after '.'")?;
+                expr = Expression::get(Box::new(expr), name);
+                continue;
+            }
+
+            break;
         }
         Ok(expr)
     }

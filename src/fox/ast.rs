@@ -85,6 +85,13 @@ define_ast!(
             }
         ) init: call, visit: visit_call,
 
+        Get(
+            GetExpr {
+                object: Box<Expression>,
+                name: Token,
+            }
+        ) init: get, visit: visit_get,
+
         Grouping(
             GroupingExpr {
                 expression: Box<Expression>
