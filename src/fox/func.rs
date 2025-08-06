@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::rc::Rc;
 use std::{
     fmt::{Debug, Display},
@@ -6,7 +7,8 @@ use std::{
 
 use crate::fox::Object;
 use crate::fox::ast::FunctionStmt;
-use crate::fox::environment::SharedEnvironmentPtr;
+use crate::fox::class::ClassInstance;
+use crate::fox::environment::{Environment, SharedEnvironmentPtr};
 
 /// Builtin function definition
 ///
@@ -72,7 +74,7 @@ impl BuiltinFunc {
 ///
 #[derive(Clone)]
 pub struct Func {
-    pub decl: Box<FunctionStmt>,
+    pub decl: Rc<FunctionStmt>,
     pub closure: SharedEnvironmentPtr,
 }
 
@@ -102,14 +104,21 @@ impl PartialEq for Func {
 
 impl Display for Func {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "<")?;
-        write!(f, "fun ({} args)", self.arity())?;
-        write!(f, ">")
+        write!(f, "<fun ({} args)>", self.arity())
     }
 }
 
 impl Func {
     pub fn arity(&self) -> usize {
         self.decl.params.len()
+    }
+
+    pub fn bind(&self, instance: Rc<RefCell<ClassInstance>>) -> Func {
+        let mut env = Environment::with(Some(self.closure.clone()));
+        env.define("this", Object::Instance(instance));
+        Func {
+            decl: self.decl.clone(),
+            closure: env.shared_ptr(),
+        }
     }
 }

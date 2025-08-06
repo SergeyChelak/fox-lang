@@ -50,10 +50,14 @@ impl<'l> Resolver<'l> {
     }
 
     fn define(&mut self, name: &Token) {
+        self.define_by_lexeme(&name.lexeme);
+    }
+
+    fn define_by_lexeme(&mut self, lexeme: &str) {
         let Some(scope) = self.scopes.last_mut() else {
             return;
         };
-        scope.insert(name.lexeme.clone(), true);
+        scope.insert(lexeme.to_string(), true);
     }
 
     pub fn resolve_statements(&mut self, statements: &[Statement]) -> FoxResult<()> {
@@ -158,6 +162,11 @@ impl<'l> ExpressionVisitor<()> for Resolver<'l> {
         self.resolve_expr(&data.value)?;
         self.resolve_expr(&data.object)
     }
+
+    fn visit_this(&mut self, data: &ThisExpr) -> FoxResult<()> {
+        let expr = Expression::This(data.clone());
+        self.resolve_local(expr, &data.keyword)
+    }
 }
 
 impl<'l> StatementVisitor<()> for Resolver<'l> {
@@ -223,6 +232,10 @@ impl<'l> StatementVisitor<()> for Resolver<'l> {
     fn visit_class(&mut self, data: &ClassStmt) -> FoxResult<()> {
         self.declare(&data.name)?;
         self.define(&data.name);
+
+        self.begin_scope();
+        self.define_by_lexeme("this");
+
         for method in &data.methods {
             let Statement::Function(func) = method else {
                 let err = FoxError::runtime(
@@ -234,6 +247,7 @@ impl<'l> StatementVisitor<()> for Resolver<'l> {
             let decl = FuncType::Method;
             self.resolve_function(func, decl)?;
         }
+        self.end_scope();
         Ok(())
     }
 }

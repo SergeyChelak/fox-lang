@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, rc::Rc};
 
 use crate::fox::{
     ErrorKind, FoxError, FoxResult, Object, TokenType,
@@ -233,7 +233,7 @@ impl ExpressionVisitor<Object> for Interpreter {
             let err = FoxError::runtime(Some(data.name.clone()), "Only instances have properties");
             return Err(err);
         };
-        instance.borrow().get(&data.name)
+        ClassInstance::get(instance, &data.name)
     }
 
     fn visit_set(&mut self, data: &SetExpr) -> FoxResult<Object> {
@@ -250,6 +250,11 @@ impl ExpressionVisitor<Object> for Interpreter {
                 Err(err)
             }
         }
+    }
+
+    fn visit_this(&mut self, data: &ThisExpr) -> FoxResult<Object> {
+        let expr = Expression::This(data.clone());
+        self.look_up_variable(&data.keyword, expr)
     }
 }
 
@@ -302,7 +307,7 @@ impl StatementVisitor<()> for Interpreter {
 
     fn visit_function(&mut self, data: &FunctionStmt) -> FoxResult<()> {
         let object = Func {
-            decl: Box::new(data.clone()),
+            decl: Rc::new(data.clone()),
             closure: self.environment.clone(),
         };
         self.environment
@@ -334,7 +339,7 @@ impl StatementVisitor<()> for Interpreter {
                 return Err(err);
             };
             let method = Func {
-                decl: Box::new(func.clone()),
+                decl: Rc::new(func.clone()),
                 closure: self.environment.clone(),
             };
             methods.insert(func.name.lexeme.clone(), method);

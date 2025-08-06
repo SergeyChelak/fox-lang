@@ -43,13 +43,13 @@ impl<'l> Parser<'l> {
     }
 
     fn declaration(&mut self) -> FoxResult<Statement> {
-        if self.matches(&[TokenType::Class]) {
+        if self.match_multiple(&[TokenType::Class]) {
             return self.class();
         }
-        if self.matches(&[TokenType::Fun]) {
+        if self.match_multiple(&[TokenType::Fun]) {
             return self.function("function");
         }
-        if self.matches(&[TokenType::Var]) {
+        if self.match_multiple(&[TokenType::Var]) {
             return self.var_declaration();
         }
         self.statement()
@@ -85,7 +85,7 @@ impl<'l> Parser<'l> {
             }
             let param = self.consume_token(TokenType::Identifier, "Expect parameter name")?;
             params.push(param);
-            next_param = self.matches(&[TokenType::Comma]);
+            next_param = self.match_multiple(&[TokenType::Comma]);
         }
         self.consume_token(TokenType::RightParenthesis, "Expect ')' after parameters")?;
 
@@ -102,7 +102,7 @@ impl<'l> Parser<'l> {
     fn var_declaration(&mut self) -> FoxResult<Statement> {
         let name = self.consume_token(TokenType::Identifier, "Expect variable name")?;
 
-        let initializer = if self.matches(&[TokenType::Equal]) {
+        let initializer = if self.match_multiple(&[TokenType::Equal]) {
             let expr = self.expression()?;
             Some(Box::new(expr))
         } else {
@@ -118,22 +118,22 @@ impl<'l> Parser<'l> {
     }
 
     fn statement(&mut self) -> FoxResult<Statement> {
-        if self.matches(&[TokenType::For]) {
+        if self.match_multiple(&[TokenType::For]) {
             return self.for_statement();
         }
-        if self.matches(&[TokenType::If]) {
+        if self.match_multiple(&[TokenType::If]) {
             return self.if_statement();
         }
-        if self.matches(&[TokenType::Print]) {
+        if self.match_multiple(&[TokenType::Print]) {
             return self.print_statement();
         }
-        if self.matches(&[TokenType::Return]) {
+        if self.match_multiple(&[TokenType::Return]) {
             return self.return_statement();
         }
-        if self.matches(&[TokenType::While]) {
+        if self.match_multiple(&[TokenType::While]) {
             return self.while_statement();
         }
-        if self.matches(&[TokenType::LeftBrace]) {
+        if self.match_multiple(&[TokenType::LeftBrace]) {
             let statements = self.block()?;
             return Ok(Statement::block(statements));
         }
@@ -153,9 +153,9 @@ impl<'l> Parser<'l> {
 
     fn for_statement(&mut self) -> FoxResult<Statement> {
         self.consume_token(TokenType::LeftParenthesis, "Expect '(' after 'for'")?;
-        let initializer = if self.matches(&[TokenType::Semicolon]) {
+        let initializer = if self.match_multiple(&[TokenType::Semicolon]) {
             None
-        } else if self.matches(&[TokenType::Var]) {
+        } else if self.match_multiple(&[TokenType::Var]) {
             Some(self.var_declaration()?)
         } else {
             Some(self.expression_statement()?)
@@ -214,7 +214,7 @@ impl<'l> Parser<'l> {
         let then_branch = self.statement()?;
 
         // I don't like this direct wrapping but it's a shortest code
-        let else_branch = if self.matches(&[TokenType::Else]) {
+        let else_branch = if self.match_multiple(&[TokenType::Else]) {
             Some(Box::new(self.statement()?))
         } else {
             None
@@ -257,7 +257,7 @@ impl<'l> Parser<'l> {
 
     fn assignment(&mut self) -> FoxResult<Expression> {
         let expr = self.or()?;
-        if !self.matches(&[TokenType::Equal]) {
+        if !self.match_multiple(&[TokenType::Equal]) {
             return Ok(expr);
         }
 
@@ -284,7 +284,7 @@ impl<'l> Parser<'l> {
     fn or(&mut self) -> FoxResult<Expression> {
         let mut expr = self.and()?;
 
-        while self.matches(&[TokenType::Or]) {
+        while self.match_multiple(&[TokenType::Or]) {
             let operator = self.force_previous_token()?;
             let right = self.and()?;
             expr = Expression::logical(Box::new(expr), operator, Box::new(right));
@@ -296,7 +296,7 @@ impl<'l> Parser<'l> {
     fn and(&mut self) -> FoxResult<Expression> {
         let mut expr = self.equality()?;
 
-        while self.matches(&[TokenType::And]) {
+        while self.match_multiple(&[TokenType::And]) {
             let operator = self.force_previous_token()?;
             let right = self.equality()?;
             expr = Expression::logical(Box::new(expr), operator, Box::new(right));
@@ -315,7 +315,7 @@ impl<'l> Parser<'l> {
     {
         let mut expr = advance_expr(self)?;
 
-        while self.matches(token_types) {
+        while self.match_multiple(token_types) {
             let operator = self.force_previous_token()?;
             let right = advance_expr(self)?;
             expr = Expression::binary(Box::new(expr), operator, Box::new(right))
@@ -346,7 +346,7 @@ impl<'l> Parser<'l> {
 
     fn unary(&mut self) -> FoxResult<Expression> {
         use TokenType::*;
-        if self.matches(&[Bang, Minus]) {
+        if self.match_multiple(&[Bang, Minus]) {
             let operator = self.force_previous_token()?;
             let right = self.unary()?;
             return Ok(Expression::unary(Box::new(right), operator));
@@ -358,12 +358,12 @@ impl<'l> Parser<'l> {
     fn call(&mut self) -> FoxResult<Expression> {
         let mut expr = self.primary()?;
         loop {
-            if self.matches(&[TokenType::LeftParenthesis]) {
+            if self.match_multiple(&[TokenType::LeftParenthesis]) {
                 expr = self.finish_call(expr)?;
                 continue;
             }
 
-            if self.matches(&[TokenType::Dot]) {
+            if self.match_multiple(&[TokenType::Dot]) {
                 let name =
                     self.consume_token(TokenType::Identifier, "Expect property name after '.'")?;
                 expr = Expression::get(Box::new(expr), name);
@@ -384,7 +384,7 @@ impl<'l> Parser<'l> {
                 }
                 let expr = self.expression()?;
                 args.push(expr);
-                if !self.matches(&[TokenType::Comma]) {
+                if !self.match_multiple(&[TokenType::Comma]) {
                     break;
                 }
             }
@@ -398,28 +398,33 @@ impl<'l> Parser<'l> {
 
     fn primary(&mut self) -> FoxResult<Expression> {
         use TokenType::*;
-        if self.matches(&[False]) {
+        if self.matches(False) {
             return Ok(Expression::literal(Object::Bool(false)));
         }
-        if self.matches(&[True]) {
+        if self.matches(True) {
             return Ok(Expression::literal(Object::Bool(true)));
         }
-        if self.matches(&[Nil]) {
+        if self.matches(Nil) {
             return Ok(Expression::literal(Object::Nil));
         }
 
-        if self.matches(&[Number, String]) {
+        if self.match_multiple(&[Number, String]) {
             let prev = self.force_previous_token()?;
             return Ok(Expression::literal(prev.literal));
         }
 
-        if self.matches(&[Identifier]) {
+        if self.matches(TokenType::This) {
+            let prev = self.force_previous_token()?;
+            return Ok(Expression::this(prev));
+        }
+
+        if self.matches(Identifier) {
             let prev = self.force_previous_token()?;
             let expr = Expression::variable(prev);
             return Ok(expr);
         }
 
-        if self.matches(&[LeftParenthesis]) {
+        if self.matches(LeftParenthesis) {
             let expr = self.expression()?;
             self.consume_token(TokenType::RightParenthesis, "Expected ')'")?;
             return Ok(Expression::grouping(Box::new(expr)));
@@ -427,7 +432,11 @@ impl<'l> Parser<'l> {
         Err(self.error(ErrorKind::ExpressionExpected))
     }
 
-    fn matches(&mut self, types: &[TokenType]) -> bool {
+    fn matches(&mut self, t_type: TokenType) -> bool {
+        self.match_multiple(&[t_type])
+    }
+
+    fn match_multiple(&mut self, types: &[TokenType]) -> bool {
         for t_type in types {
             if self.check_type(t_type) {
                 _ = self.advance();

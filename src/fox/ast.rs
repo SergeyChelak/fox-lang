@@ -120,6 +120,12 @@ define_ast!(
             }
         ) init: set, visit: visit_set,
 
+        This(
+            ThisExpr {
+                keyword: Token,
+            }
+        ) init: this, visit: visit_this,
+
         Unary(UnaryExpr {
                 expression: Box<Expression>,
                 operator: Token

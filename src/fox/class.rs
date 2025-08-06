@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Display, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, fmt::Display, rc::Rc};
 
 use crate::fox::{FoxError, FoxResult, func::Func, object::*, token::Token, utils::fill_hash};
 
@@ -52,14 +52,18 @@ impl ClassInstance {
         }
     }
 
-    pub fn get(&self, name: &Token) -> FoxResult<Object> {
+    pub fn get(instance_ref: Rc<RefCell<Self>>, name: &Token) -> FoxResult<Object> {
         let lexeme = &name.lexeme;
-        if let Some(obj) = self.fields.get(lexeme).cloned() {
+        if let Some(obj) = instance_ref.borrow().fields.get(lexeme).cloned() {
             return Ok(obj);
         };
 
-        if let Some(method) = self.meta_class_ref.find_method(&name.lexeme) {
-            return Ok(Object::Callee(method));
+        if let Some(method) = instance_ref
+            .borrow()
+            .meta_class_ref
+            .find_method(&name.lexeme)
+        {
+            return Ok(Object::Callee(method.bind(instance_ref.clone())));
         }
 
         let err = FoxError::runtime(
