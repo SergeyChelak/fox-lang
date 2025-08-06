@@ -11,10 +11,17 @@ enum FuncType {
     Method,
 }
 
+#[derive(Clone, Copy)]
+enum ClassType {
+    None,
+    Class,
+}
+
 pub struct Resolver<'l> {
     interpreter: &'l mut Interpreter,
     scopes: Vec<Scope>,
     current_function: FuncType,
+    current_class: ClassType,
 }
 
 impl<'l> Resolver<'l> {
@@ -23,6 +30,7 @@ impl<'l> Resolver<'l> {
             interpreter,
             scopes: Default::default(),
             current_function: FuncType::None,
+            current_class: ClassType::None,
         }
     }
 
@@ -164,6 +172,13 @@ impl<'l> ExpressionVisitor<()> for Resolver<'l> {
     }
 
     fn visit_this(&mut self, data: &ThisExpr) -> FoxResult<()> {
+        if matches!(self.current_class, ClassType::None) {
+            let err = FoxError::runtime(
+                Some(data.keyword.clone()),
+                "Can't use 'this' outside of a class",
+            );
+            return Err(err);
+        }
         let expr = Expression::This(data.clone());
         self.resolve_local(expr, &data.keyword)
     }
@@ -230,6 +245,8 @@ impl<'l> StatementVisitor<()> for Resolver<'l> {
     }
 
     fn visit_class(&mut self, data: &ClassStmt) -> FoxResult<()> {
+        let enclosing = self.current_class;
+        self.current_class = ClassType::Class;
         self.declare(&data.name)?;
         self.define(&data.name);
 
@@ -248,6 +265,7 @@ impl<'l> StatementVisitor<()> for Resolver<'l> {
             self.resolve_function(func, decl)?;
         }
         self.end_scope();
+        self.current_class = enclosing;
         Ok(())
     }
 }
