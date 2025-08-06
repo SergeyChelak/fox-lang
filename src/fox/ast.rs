@@ -112,6 +112,14 @@ define_ast!(
             }
         ) init: logical, visit: visit_logical,
 
+        Set(
+            SetExpr {
+                object: Box<Expression>,
+                name: Token,
+                value: Box<Expression>,
+            }
+        ) init: set, visit: visit_set,
+
         Unary(UnaryExpr {
                 expression: Box<Expression>,
                 operator: Token

@@ -1,4 +1,5 @@
 use std::{
+    cell::RefCell,
     collections::HashMap,
     fmt::{Debug, Display},
     rc::Rc,
@@ -139,6 +140,10 @@ impl ClassInstance {
         };
         Ok(obj)
     }
+
+    pub fn set(&mut self, name: &Token, value: Object) {
+        self.fields.insert(name.lexeme.clone(), value);
+    }
 }
 
 impl std::hash::Hash for ClassInstance {
@@ -167,7 +172,7 @@ pub enum Object {
     Bool(bool),
     Callee(Func),
     Class(Rc<MetaClass>),
-    Instance(ClassInstance),
+    Instance(Rc<RefCell<ClassInstance>>),
 }
 
 impl std::hash::Hash for Object {
@@ -197,7 +202,7 @@ impl std::hash::Hash for Object {
             }
             Instance(val) => {
                 6.hash(state);
-                val.hash(state);
+                val.borrow().hash(state);
             }
         }
     }
@@ -238,7 +243,7 @@ impl Display for Object {
             Self::Bool(value) => write!(f, "{value}"),
             Self::Callee(value) => write!(f, "{value}"),
             Self::Class(value) => write!(f, "class {value}"),
-            Self::Instance(value) => write!(f, "instance of {value}"),
+            Self::Instance(value) => write!(f, "instance of {}", value.borrow()),
         }
     }
 }

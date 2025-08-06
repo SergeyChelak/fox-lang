@@ -4,6 +4,7 @@ use crate::fox::{
     ErrorKind, FoxError, FoxResult, Object, TokenType,
     ast::*,
     environment::{Environment, SharedEnvironmentPtr},
+    mutable_cell,
     token::{ClassInstance, Func, MetaClass, Token},
 };
 
@@ -218,7 +219,7 @@ impl ExpressionVisitor<Object> for Interpreter {
             }
             Object::Class(meta) => {
                 let obj = ClassInstance::new(meta.clone());
-                Ok(Object::Instance(obj))
+                Ok(Object::Instance(mutable_cell(obj)))
             }
             _ => Err(FoxError::runtime(
                 Some(data.paren.clone()),
@@ -233,7 +234,23 @@ impl ExpressionVisitor<Object> for Interpreter {
             let err = FoxError::runtime(Some(data.name.clone()), "Only instances have properties");
             return Err(err);
         };
-        instance.get(&data.name)
+        instance.borrow().get(&data.name)
+    }
+
+    fn visit_set(&mut self, data: &SetExpr) -> FoxResult<Object> {
+        let object = self.evaluate(&data.object)?;
+
+        match object {
+            Object::Instance(instance) => {
+                let value = self.evaluate(&data.value)?;
+                instance.borrow_mut().set(&data.name, value.clone());
+                Ok(value)
+            }
+            _ => {
+                let err = FoxError::runtime(Some(data.name.clone()), "Only instances have fields");
+                Err(err)
+            }
+        }
     }
 }
 

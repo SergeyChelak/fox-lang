@@ -269,6 +269,11 @@ impl<'l> Parser<'l> {
                 let name = data.name;
                 Ok(Expression::assign(name, Box::new(value)))
             }
+            Expression::Get(get_expr) => Ok(Expression::set(
+                get_expr.object,
+                get_expr.name,
+                Box::new(value),
+            )),
             _ => {
                 let err = FoxError::token(ErrorKind::InvalidAssignmentTarget, Some(equals));
                 Err(err)

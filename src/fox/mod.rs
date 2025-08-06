@@ -57,3 +57,7 @@ impl Fox {
         text
     }
 }
+
+fn mutable_cell<T>(value: T) -> std::rc::Rc<std::cell::RefCell<T>> {
+    std::rc::Rc::new(std::cell::RefCell::new(value))
+}

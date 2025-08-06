@@ -1,6 +1,6 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-use crate::fox::{FoxError, FoxResult, token::Token};
+use crate::fox::{FoxError, FoxResult, mutable_cell, token::Token};
 
 use super::Object;
 
@@ -26,7 +26,7 @@ impl Environment {
     }
 
     pub fn shared_ptr(self) -> SharedEnvironmentPtr {
-        Rc::new(RefCell::new(self))
+        mutable_cell(self)
     }
 
     pub fn assign(&mut self, name: &Token, value: Object) -> FoxResult<()> {

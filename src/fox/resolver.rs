@@ -152,6 +152,11 @@ impl<'l> ExpressionVisitor<()> for Resolver<'l> {
     fn visit_get(&mut self, data: &GetExpr) -> FoxResult<()> {
         self.resolve_expr(&data.object)
     }
+
+    fn visit_set(&mut self, data: &SetExpr) -> FoxResult<()> {
+        self.resolve_expr(&data.value)?;
+        self.resolve_expr(&data.object)
+    }
 }
 
 impl<'l> StatementVisitor<()> for Resolver<'l> {
