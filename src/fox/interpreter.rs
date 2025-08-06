@@ -4,8 +4,9 @@ use crate::fox::{
     ErrorKind, FoxError, FoxResult, Object, TokenType,
     ast::*,
     environment::{Environment, SharedEnvironmentPtr},
+    func::*,
     mutable_cell,
-    token::{ClassInstance, Func, MetaClass, Token},
+    token::{ClassInstance, MetaClass, Token},
 };
 
 pub struct Interpreter {
@@ -18,7 +19,7 @@ impl Interpreter {
     pub fn new() -> Self {
         let mut env = Environment::new();
         // register builtin functions
-        env.define("clock", Object::Callee(Func::clock()));
+        env.define("clock", Object::BuiltinCallee(BuiltinFunc::clock()));
         let ptr = env.shared_ptr();
 
         Self {
@@ -61,35 +62,26 @@ impl Interpreter {
         result
     }
 
-    fn func_call(&mut self, token: &Token, func: &Func, args: &[Object]) -> FoxResult<Object> {
-        let arity = func.arity();
+    fn func_arity_check(&self, token: &Token, arity: usize, args: &[Object]) -> FoxResult<()> {
         if args.len() != arity {
             let msg = format!("Expected {}  arguments but got {}", arity, args.len());
             return Err(FoxError::runtime(Some(token.clone()), &msg));
         }
-
-        match func {
-            Func::Builtin { body, .. } => Ok(body(args)),
-            Func::Declaration { decl, closure } => self.execute_func(decl, closure.clone(), args),
-        }
+        Ok(())
     }
 
-    fn execute_func(
-        &mut self,
-        func: &FunctionStmt,
-        closure: SharedEnvironmentPtr,
-        args: &[Object],
-    ) -> FoxResult<Object> {
-        let mut env = Environment::with(Some(closure));
+    fn func_execute(&mut self, func: &Func, args: &[Object]) -> FoxResult<Object> {
+        let mut env = Environment::with(Some(func.closure.clone()));
 
-        func.params
+        func.decl
+            .params
             .iter()
             .zip(args.iter())
             .for_each(|(token, object)| {
                 env.define(&token.lexeme, object.clone());
             });
 
-        let result = self.execute_block(&func.body, env);
+        let result = self.execute_block(&func.decl.body, env);
         if let Err(err) = result {
             return match err.kind() {
                 ErrorKind::Return(value) => Ok(value.clone()),
@@ -208,14 +200,20 @@ impl ExpressionVisitor<Object> for Interpreter {
 
     fn visit_call(&mut self, data: &CallExpr) -> FoxResult<Object> {
         let eval = self.evaluate(&data.callee)?;
+        let mut args = Vec::new();
+        for arg in &data.arguments {
+            let expr = self.evaluate(arg)?;
+            args.push(expr);
+        }
         match eval {
+            Object::BuiltinCallee(func) => {
+                self.func_arity_check(&data.paren, func.arity(), &args)?;
+                let value = (func.body)(&args);
+                Ok(value)
+            }
             Object::Callee(func) => {
-                let mut args = Vec::new();
-                for arg in &data.arguments {
-                    let expr = self.evaluate(arg)?;
-                    args.push(expr);
-                }
-                self.func_call(&data.paren, &func, &args)
+                self.func_arity_check(&data.paren, func.arity(), &args)?;
+                self.func_execute(&func, &args)
             }
             Object::Class(meta) => {
                 let obj = ClassInstance::new(meta.clone());
@@ -302,7 +300,7 @@ impl StatementVisitor<()> for Interpreter {
     }
 
     fn visit_function(&mut self, data: &FunctionStmt) -> FoxResult<()> {
-        let object = Func::Declaration {
+        let object = Func {
             decl: Box::new(data.clone()),
             closure: self.environment.clone(),
         };
@@ -325,6 +323,7 @@ impl StatementVisitor<()> for Interpreter {
         self.environment
             .borrow_mut()
             .define(&data.name.lexeme, Object::Nil);
+        todo!();
         let class_data = MetaClass::new(&data.name.lexeme);
         let class = Object::Class(std::rc::Rc::new(class_data));
         self.environment.borrow_mut().assign(&data.name, class)

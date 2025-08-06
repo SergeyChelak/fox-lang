@@ -3,10 +3,12 @@ use std::{
     collections::HashMap,
     fmt::{Debug, Display},
     rc::Rc,
-    time::{SystemTime, UNIX_EPOCH},
 };
 
-use crate::fox::{FoxError, FoxResult, ast::FunctionStmt, environment::SharedEnvironmentPtr};
+use crate::fox::{
+    FoxError, FoxResult,
+    func::{BuiltinFunc, Func},
+};
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub struct Token {
@@ -19,80 +21,6 @@ pub struct Token {
 impl Token {
     pub fn is_eof(&self) -> bool {
         matches!(self.token_type, TokenType::Eof)
-    }
-}
-
-pub type BuiltInFunction = dyn Fn(&[Object]) -> Object;
-
-#[derive(Clone)]
-pub enum Func {
-    Builtin {
-        body: Rc<BuiltInFunction>,
-        arity: usize,
-    },
-    Declaration {
-        decl: Box<FunctionStmt>,
-        closure: SharedEnvironmentPtr,
-    },
-}
-
-impl Debug for Func {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Builtin { arity, .. } => f
-                .debug_struct("Builtin func")
-                .field("arity", arity)
-                .finish(),
-            Self::Declaration { .. } => f.debug_struct("Decl func").finish(),
-        }
-    }
-}
-
-impl std::hash::Hash for Func {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        use Func::*;
-        match self {
-            Builtin { body, arity } => {
-                0.hash(state);
-                Rc::as_ptr(body).hash(state);
-                arity.hash(state);
-            }
-            Declaration { decl, closure } => {
-                1.hash(state);
-                decl.hash(state);
-                closure.as_ptr().hash(state);
-            }
-        }
-    }
-}
-
-impl Eq for Func {}
-
-impl PartialEq for Func {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (
-                Self::Builtin {
-                    body: l_body,
-                    arity: l_arity,
-                },
-                Self::Builtin {
-                    body: r_body,
-                    arity: r_arity,
-                },
-            ) => Rc::ptr_eq(l_body, r_body) && l_arity == r_arity,
-            (
-                Self::Declaration {
-                    decl: l_decl,
-                    closure: l_closure,
-                },
-                Self::Declaration {
-                    decl: r_decl,
-                    closure: r_closure,
-                },
-            ) => l_decl == r_decl && Rc::ptr_eq(l_closure, r_closure),
-            _ => false,
-        }
     }
 }
 
@@ -170,6 +98,7 @@ pub enum Object {
     Double(f32),
     Text(String),
     Bool(bool),
+    BuiltinCallee(BuiltinFunc),
     Callee(Func),
     Class(Rc<MetaClass>),
     Instance(Rc<RefCell<ClassInstance>>),
@@ -196,12 +125,16 @@ impl std::hash::Hash for Object {
                 4.hash(state);
                 val.hash(state);
             }
-            Class(val) => {
+            BuiltinCallee(val) => {
                 5.hash(state);
                 val.hash(state);
             }
-            Instance(val) => {
+            Class(val) => {
                 6.hash(state);
+                val.hash(state);
+            }
+            Instance(val) => {
+                7.hash(state);
                 val.borrow().hash(state);
             }
         }
@@ -241,49 +174,11 @@ impl Display for Object {
             Self::Double(value) => write!(f, "{value}"),
             Self::Text(value) => write!(f, "{value}"),
             Self::Bool(value) => write!(f, "{value}"),
+            Self::BuiltinCallee(value) => write!(f, "{value}"),
             Self::Callee(value) => write!(f, "{value}"),
             Self::Class(value) => write!(f, "class {value}"),
             Self::Instance(value) => write!(f, "instance of {}", value.borrow()),
         }
-    }
-}
-
-impl Display for Func {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "<")?;
-        if self.is_builtin() {
-            write!(f, "builtin ")?;
-        }
-        write!(f, "fun ({} args)", self.arity())?;
-        write!(f, ">")
-    }
-}
-
-impl Func {
-    pub fn clock() -> Self {
-        let body = |_: &[Object]| -> Object {
-            let time = SystemTime::now();
-            let Ok(duration) = time.duration_since(UNIX_EPOCH) else {
-                println!("[ERROR] failed to calculate system time duration");
-                return Object::Nil;
-            };
-            Object::Double(duration.as_secs() as f32)
-        };
-        Self::Builtin {
-            body: Rc::new(body),
-            arity: 0,
-        }
-    }
-
-    pub fn arity(&self) -> usize {
-        match self {
-            Func::Builtin { arity, .. } => *arity,
-            Func::Declaration { decl, .. } => decl.params.len(),
-        }
-    }
-
-    fn is_builtin(&self) -> bool {
-        matches!(self, Func::Builtin { .. })
     }
 }
 

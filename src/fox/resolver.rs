@@ -8,6 +8,7 @@ type Scope = HashMap<String, bool>;
 enum FuncType {
     None,
     Func,
+    Method,
 }
 
 pub struct Resolver<'l> {
@@ -222,6 +223,17 @@ impl<'l> StatementVisitor<()> for Resolver<'l> {
     fn visit_class(&mut self, data: &ClassStmt) -> FoxResult<()> {
         self.declare(&data.name)?;
         self.define(&data.name);
+        for method in &data.methods {
+            let Statement::Function(func) = method else {
+                let err = FoxError::runtime(
+                    None,
+                    "Non function statement found in class. Possible bug in Fox implemetation",
+                );
+                return Err(err);
+            };
+            let decl = FuncType::Method;
+            self.resolve_function(func, decl)?;
+        }
         Ok(())
     }
 }
