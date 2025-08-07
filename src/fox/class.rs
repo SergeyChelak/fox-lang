@@ -27,11 +27,9 @@ impl MetaClass {
     pub fn constructor(meta: Rc<Self>) -> Constructor {
         let instance = ClassInstance::new(meta.clone());
         let instance = mutable_cell(instance);
-        let initializer = if let Some(init) = meta.find_method(INITIALIZER_NAME) {
-            Some(init.bind(instance.clone()))
-        } else {
-            None
-        };
+        let initializer = meta
+            .find_method(INITIALIZER_NAME)
+            .map(|init| init.bind(instance.clone()));
         Constructor {
             initializer,
             instance,
