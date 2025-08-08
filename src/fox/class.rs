@@ -57,7 +57,15 @@ impl MetaClass {
     }
 
     fn find_method(&self, name: &str) -> Option<Func> {
-        self.methods.get(name).cloned()
+        let func = self.methods.get(name);
+        if func.is_some() {
+            return func.cloned();
+        }
+        if let Some(superclass) = &self.superclass {
+            superclass.find_method(name)
+        } else {
+            None
+        }
     }
 }
 
