@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use crate::fox::{
-    FoxError, FoxResult, KEYWORD_THIS, ast::*, class::INITIALIZER_NAME, interpreter::Interpreter,
-    token::Token,
+    FoxError, FoxResult, KEYWORD_SUPER, KEYWORD_THIS, ast::*, class::INITIALIZER_NAME,
+    interpreter::Interpreter, token::Token,
 };
 
 type Scope = HashMap<String, bool>;
@@ -62,10 +62,10 @@ impl<'l> Resolver<'l> {
     }
 
     fn define(&mut self, name: &Token) {
-        self.define_by_lexeme(&name.lexeme);
+        self.define_lexeme_with_true(&name.lexeme);
     }
 
-    fn define_by_lexeme(&mut self, lexeme: &str) {
+    fn define_lexeme_with_true(&mut self, lexeme: &str) {
         let Some(scope) = self.scopes.last_mut() else {
             return;
         };
@@ -186,6 +186,11 @@ impl<'l> ExpressionVisitor<()> for Resolver<'l> {
         let expr = Expression::This(data.clone());
         self.resolve_local(expr, &data.keyword)
     }
+
+    fn visit_super(&mut self, data: &SuperExpr) -> FoxResult<()> {
+        let expr = Expression::Super(data.clone());
+        self.resolve_local(expr, &data.keyword)
+    }
 }
 
 impl<'l> StatementVisitor<()> for Resolver<'l> {
@@ -268,10 +273,13 @@ impl<'l> StatementVisitor<()> for Resolver<'l> {
                     "A class can't inherit from itself",
                 ));
             }
+            self.resolve_expr(superclass)?;
+            self.begin_scope();
+            self.define_lexeme_with_true(KEYWORD_SUPER);
         }
 
         self.begin_scope();
-        self.define_by_lexeme(KEYWORD_THIS);
+        self.define_lexeme_with_true(KEYWORD_THIS);
 
         for method in &data.methods {
             let func = method.as_function()?;
@@ -282,6 +290,9 @@ impl<'l> StatementVisitor<()> for Resolver<'l> {
             self.resolve_function(func, decl)?;
         }
         self.end_scope();
+        if data.superclass.is_some() {
+            self.end_scope();
+        }
         self.current_class = enclosing;
         Ok(())
     }

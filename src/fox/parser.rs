@@ -422,7 +422,14 @@ impl<'l> Parser<'l> {
             return Ok(Expression::literal(prev.literal));
         }
 
-        if self.matches(TokenType::This) {
+        if self.matches(Super) {
+            let keyword = self.force_previous_token()?;
+            self.consume_token(Dot, "Expect '.' after 'super'")?;
+            let method = self.consume_token(Identifier, "Expect superclass method name")?;
+            return Ok(Expression::super_expr(keyword, method));
+        }
+
+        if self.matches(This) {
             let prev = self.force_previous_token()?;
             return Ok(Expression::this(prev));
         }

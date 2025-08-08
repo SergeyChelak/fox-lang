@@ -1,5 +1,7 @@
 use std::{cell::RefCell, fmt::Display, rc::Rc};
 
+use crate::fox::{FoxError, FoxResult, utils::SharedPtr};
+
 use super::{
     class::{ClassInstance, MetaClass},
     func::{BuiltinFunc, Func},
@@ -62,6 +64,24 @@ impl Object {
             Object::Nil => false,
             Object::Bool(value) => *value,
             _ => true,
+        }
+    }
+
+    pub fn as_meta_class(&self) -> FoxResult<Rc<MetaClass>> {
+        match self {
+            Object::Class(meta) => Ok(meta.clone()),
+            _ => Err(FoxError::bug(&format!(
+                "Expected MetaClass, found {self:?}"
+            ))),
+        }
+    }
+
+    pub fn as_class_instance(&self) -> FoxResult<SharedPtr<ClassInstance>> {
+        match self {
+            Object::Instance(obj) => Ok(obj.clone()),
+            _ => Err(FoxError::bug(&format!(
+                "Expected class instance, found {self:?}"
+            ))),
         }
     }
 }

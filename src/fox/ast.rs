@@ -120,6 +120,13 @@ define_ast!(
             }
         ) init: set, visit: visit_set,
 
+        Super(
+            SuperExpr {
+                keyword: Token,
+                method: Token,
+            }
+        ) init: super_expr, visit: visit_super,
+
         This(
             ThisExpr {
                 keyword: Token,

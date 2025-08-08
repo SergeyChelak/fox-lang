@@ -56,7 +56,7 @@ impl MetaClass {
         method.arity()
     }
 
-    fn find_method(&self, name: &str) -> Option<Func> {
+    pub fn find_method(&self, name: &str) -> Option<Func> {
         let func = self.methods.get(name);
         if func.is_some() {
             return func.cloned();

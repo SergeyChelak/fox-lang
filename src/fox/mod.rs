@@ -21,6 +21,7 @@ use utils::*;
 use crate::fox::{interpreter::Interpreter, resolver::Resolver};
 
 const KEYWORD_THIS: &str = "this";
+const KEYWORD_SUPER: &str = "super";
 
 pub type Source = [char];
 

@@ -1,7 +1,7 @@
 use std::{collections::HashMap, rc::Rc};
 
 use crate::fox::{
-    ErrorKind, FoxError, FoxResult, KEYWORD_THIS, Object, TokenType,
+    ErrorKind, FoxError, FoxResult, KEYWORD_SUPER, KEYWORD_THIS, Object, TokenType,
     ast::*,
     class::{ClassInstance, INITIALIZER_NAME, MetaClass},
     environment::{Environment, SharedEnvironmentPtr},
@@ -266,6 +266,31 @@ impl ExpressionVisitor<Object> for Interpreter {
         let expr = Expression::This(data.clone());
         self.look_up_variable(&data.keyword, expr)
     }
+
+    fn visit_super(&mut self, data: &SuperExpr) -> FoxResult<Object> {
+        let expr = Expression::Super(data.clone());
+        let Some(distance) = self.locals.get(&expr) else {
+            return Err(FoxError::bug("Distance for super must be set"));
+        };
+        let superclass = self
+            .environment
+            .borrow()
+            .get_at(*distance, KEYWORD_SUPER)?
+            .as_meta_class()?;
+        let object = self
+            .environment
+            .borrow()
+            .get_at(distance - 1, KEYWORD_THIS)?
+            .as_class_instance()?;
+        let Some(method) = superclass.find_method(&data.method.lexeme) else {
+            return Err(FoxError::runtime(
+                Some(data.method.clone()),
+                &format!("Undefined property '{}'", data.method.lexeme),
+            ));
+        };
+        let func = method.bind(object);
+        Ok(Object::Callee(func))
+    }
 }
 
 impl StatementVisitor<()> for Interpreter {
@@ -350,6 +375,14 @@ impl StatementVisitor<()> for Interpreter {
         self.environment
             .borrow_mut()
             .define(&data.name.lexeme, Object::Nil);
+
+        let enclosing = self.environment.clone();
+        if let Some(obj) = &superclass {
+            self.environment = Environment::with(Some(enclosing.clone())).shared_ptr();
+            let value = Object::Class(obj.clone());
+            self.environment.borrow_mut().define(KEYWORD_SUPER, value);
+        }
+
         let mut methods = HashMap::new();
         for stmt in &data.methods {
             let func = stmt.as_function()?;
@@ -362,6 +395,11 @@ impl StatementVisitor<()> for Interpreter {
         }
         let class_data = MetaClass::new(&data.name.lexeme, superclass, methods);
         let class = Object::Class(std::rc::Rc::new(class_data));
+
+        if data.superclass.is_some() {
+            self.environment = enclosing;
+        }
+
         self.environment.borrow_mut().assign(&data.name, class)
     }
 }
