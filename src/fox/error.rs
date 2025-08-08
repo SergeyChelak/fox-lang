@@ -40,6 +40,11 @@ impl FoxError {
         Self::token(kind, token)
     }
 
+    pub fn bug(message: &str) -> Self {
+        let kind = ErrorKind::Bug(message.to_string());
+        Self::token(kind, None)
+    }
+
     pub fn error(kind: ErrorKind) -> Self {
         Self {
             kind,
@@ -77,6 +82,7 @@ pub enum ErrorKind {
     Runtime(String),
     Parse(String),
     Resolver(String),
+    Bug(String),
     Return(Object),
 }
 
@@ -94,6 +100,7 @@ impl Display for ErrorKind {
             OperandMustBeNumber => "Operand must be a number",
             OperandsMustBeSameType => "Operands must be two numbers or two strings",
             Runtime(message) | Parse(message) | Resolver(message) => message,
+            Bug(message) => &format!("[BUG] {message}"),
             Return(_) => unreachable!("Return shouldn't be an error"),
         };
         write!(f, "{text}")

@@ -260,17 +260,21 @@ impl<'l> StatementVisitor<()> for Resolver<'l> {
         self.declare(&data.name)?;
         self.define(&data.name);
 
+        if let Some(superclass) = &data.superclass {
+            let variable = superclass.as_variable()?;
+            if variable.name.lexeme == data.name.lexeme {
+                return Err(FoxError::resolver(
+                    Some(variable.name.clone()),
+                    "A class can't inherit from itself",
+                ));
+            }
+        }
+
         self.begin_scope();
         self.define_by_lexeme(KEYWORD_THIS);
 
         for method in &data.methods {
-            let Statement::Function(func) = method else {
-                let err = FoxError::runtime(
-                    None,
-                    "[Resolver] Non function statement found in class. Possible bug in Fox implementation",
-                );
-                return Err(err);
-            };
+            let func = method.as_function()?;
             let mut decl = FuncType::Method;
             if func.name.lexeme == INITIALIZER_NAME {
                 decl = FuncType::Initializer;

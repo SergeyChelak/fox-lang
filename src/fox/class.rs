@@ -15,6 +15,7 @@ use crate::fox::{
 #[derive(Debug, Clone)]
 pub struct MetaClass {
     name: String,
+    superclass: Option<Rc<MetaClass>>,
     methods: HashMap<String, Func>,
 }
 
@@ -36,9 +37,14 @@ impl MetaClass {
         }
     }
 
-    pub fn new(name: &str, methods: HashMap<String, Func>) -> Self {
+    pub fn new(
+        name: &str,
+        superclass: Option<Rc<MetaClass>>,
+        methods: HashMap<String, Func>,
+    ) -> Self {
         Self {
             name: name.to_string(),
+            superclass,
             methods,
         }
     }

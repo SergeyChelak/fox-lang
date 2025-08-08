@@ -1,4 +1,4 @@
-use crate::fox::{FoxResult, Object, Token};
+use crate::fox::{FoxError, FoxResult, Object, Token};
 
 macro_rules! define_ast {
     (
@@ -151,6 +151,7 @@ define_ast!(
         Class(
             ClassStmt {
                 name: Token,
+                superclass: Option<Expression>,
                 methods: Vec<Statement>,
             }
         ) init: class, visit: visit_class,
@@ -205,6 +206,29 @@ define_ast!(
         ) init: while_stmt, visit: visit_while,
     }
 );
+
+impl Expression {
+    pub fn as_variable(&self) -> FoxResult<&VariableExpr> {
+        match self {
+            Expression::Variable(expr) => Ok(expr),
+            expr => Err(FoxError::bug(&format!(
+                "Expected variable expression, found {expr:?}"
+            ))),
+        }
+    }
+}
+
+impl Statement {
+    pub fn as_function(&self) -> FoxResult<&FunctionStmt> {
+        match self {
+            Statement::Function(func) => Ok(func),
+            stmt => {
+                let err = FoxError::bug(&format!("Expected function statement, found {stmt:?}"));
+                Err(err)
+            }
+        }
+    }
+}
 
 #[cfg(test)]
 mod test {

@@ -333,18 +333,26 @@ impl StatementVisitor<()> for Interpreter {
     }
 
     fn visit_class(&mut self, data: &ClassStmt) -> FoxResult<()> {
+        let mut superclass: Option<Rc<MetaClass>> = None;
+        if let Some(expr) = &data.superclass {
+            let eval = self.evaluate(expr)?;
+            match eval {
+                Object::Class(val) => {
+                    superclass = Some(val.clone());
+                }
+                _ => {
+                    let token = expr.as_variable()?.name.clone();
+                    return Err(FoxError::runtime(Some(token), "Superclass must be a class"));
+                }
+            }
+        }
+
         self.environment
             .borrow_mut()
             .define(&data.name.lexeme, Object::Nil);
         let mut methods = HashMap::new();
         for stmt in &data.methods {
-            let Statement::Function(func) = stmt else {
-                let err = FoxError::runtime(
-                    None,
-                    "[Interpreter] Non function statement found in class. Possible bug in Fox implementation",
-                );
-                return Err(err);
-            };
+            let func = stmt.as_function()?;
             let method = Func::new(
                 Rc::new(func.clone()),
                 self.environment.clone(),
@@ -352,7 +360,7 @@ impl StatementVisitor<()> for Interpreter {
             );
             methods.insert(func.name.lexeme.clone(), method);
         }
-        let class_data = MetaClass::new(&data.name.lexeme, methods);
+        let class_data = MetaClass::new(&data.name.lexeme, superclass, methods);
         let class = Object::Class(std::rc::Rc::new(class_data));
         self.environment.borrow_mut().assign(&data.name, class)
     }

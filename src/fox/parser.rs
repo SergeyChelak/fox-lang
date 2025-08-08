@@ -57,6 +57,15 @@ impl<'l> Parser<'l> {
 
     fn class(&mut self) -> FoxResult<Statement> {
         let name = self.consume_token(TokenType::Identifier, "Expect class name")?;
+
+        let superclass = if self.matches(TokenType::Less) {
+            self.consume_token(TokenType::Identifier, "Expect superclass name")?;
+            let name = self.force_previous_token()?;
+            Some(Expression::variable(name))
+        } else {
+            None
+        };
+
         self.consume_token(TokenType::LeftBrace, "Expect '{' before class body")?;
 
         let mut methods = Vec::new();
@@ -67,7 +76,7 @@ impl<'l> Parser<'l> {
 
         self.consume_token(TokenType::RightBrace, "Expect '}' after class body")?;
 
-        Ok(Statement::class(name, methods))
+        Ok(Statement::class(name, superclass, methods))
     }
 
     fn function(&mut self, kind: &str) -> FoxResult<Statement> {
