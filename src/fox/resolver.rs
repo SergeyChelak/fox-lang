@@ -19,6 +19,7 @@ enum FuncType {
 enum ClassType {
     None,
     Class,
+    Subclass,
 }
 
 pub struct Resolver<'l> {
@@ -188,6 +189,22 @@ impl<'l> ExpressionVisitor<()> for Resolver<'l> {
     }
 
     fn visit_super(&mut self, data: &SuperExpr) -> FoxResult<()> {
+        if matches!(self.current_class, ClassType::None) {
+            let err = FoxError::resolver(
+                Some(data.keyword.clone()),
+                "Can't use 'super' outside of a class",
+            );
+            return Err(err);
+        }
+
+        if !matches!(self.current_class, ClassType::Subclass) {
+            let err = FoxError::resolver(
+                Some(data.keyword.clone()),
+                "Can't use 'super' in a class with no superclass",
+            );
+            return Err(err);
+        }
+
         let expr = Expression::Super(data.clone());
         self.resolve_local(expr, &data.keyword)
     }
@@ -273,6 +290,7 @@ impl<'l> StatementVisitor<()> for Resolver<'l> {
                     "A class can't inherit from itself",
                 ));
             }
+            self.current_class = ClassType::Subclass;
             self.resolve_expr(superclass)?;
             self.begin_scope();
             self.define_lexeme_with_true(KEYWORD_SUPER);
