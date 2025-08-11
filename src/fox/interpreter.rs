@@ -457,6 +457,25 @@ mod test {
     }
 
     #[test]
+    fn test_binary_double_divide() {
+        let mut interpreter = Interpreter::new();
+        // ok
+        let expr = binary_expr(Object::Double(6.0), TokenType::Slash, Object::Double(2.0));
+        let result = interpreter.visit_binary(&expr);
+        assert!(result.is_ok());
+        let obj = result.unwrap();
+        assert_eq!(obj, Object::Double(3.0));
+        // div by zero
+        let expr = binary_expr(Object::Double(6.0), TokenType::Slash, Object::Double(0.0));
+        let result = interpreter.visit_binary(&expr);
+        assert!(result.is_err());
+        // type mismatch
+        let expr = binary_expr(Object::Nil, TokenType::Slash, Object::Double(0.0));
+        let result = interpreter.visit_binary(&expr);
+        assert!(result.is_err());
+    }
+
+    #[test]
     fn test_binary_double_greater() {
         let mut interpreter = Interpreter::new();
         // true

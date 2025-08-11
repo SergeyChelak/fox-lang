@@ -114,7 +114,7 @@ impl Object {
         use Object::*;
         match (self, other) {
             (Double(_), Double(0.0)) => Err("Division by zero".to_string()),
-            (Double(l), Double(r)) => Ok(Object::Double(l - r)),
+            (Double(l), Double(r)) => Ok(Object::Double(l / r)),
             _ => Err("Type mismatch for '/'".to_string()),
         }
     }
