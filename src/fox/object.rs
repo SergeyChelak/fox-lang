@@ -84,6 +84,72 @@ impl Object {
             ))),
         }
     }
+
+    pub fn plus(&self, other: &Object) -> Result<Object, String> {
+        use Object::*;
+        match (self, other) {
+            (Double(l), Double(r)) => Ok(Object::Double(l + r)),
+            (Text(l), Text(r)) => Ok(Object::Text(l.to_owned() + r)),
+            _ => Err("Type mismatch for '+'".to_string()),
+        }
+    }
+
+    pub fn minus(&self, other: &Object) -> Result<Object, String> {
+        use Object::*;
+        match (self, other) {
+            (Double(l), Double(r)) => Ok(Object::Double(l - r)),
+            _ => Err("Type mismatch for '-'".to_string()),
+        }
+    }
+
+    pub fn multiply(&self, other: &Object) -> Result<Object, String> {
+        use Object::*;
+        match (self, other) {
+            (Double(l), Double(r)) => Ok(Object::Double(l * r)),
+            _ => Err("Type mismatch for '*'".to_string()),
+        }
+    }
+
+    pub fn divide(&self, other: &Object) -> Result<Object, String> {
+        use Object::*;
+        match (self, other) {
+            (Double(_), Double(0.0)) => Err("Division by zero".to_string()),
+            (Double(l), Double(r)) => Ok(Object::Double(l - r)),
+            _ => Err("Type mismatch for '/'".to_string()),
+        }
+    }
+
+    pub fn greater(&self, other: &Object) -> Result<Object, String> {
+        use Object::*;
+        match (self, other) {
+            (Double(l), Double(r)) => Ok(Object::Bool(l > r)),
+            _ => Err("Type mismatch for '>'".to_string()),
+        }
+    }
+
+    pub fn greater_equal(&self, other: &Object) -> Result<Object, String> {
+        use Object::*;
+        match (self, other) {
+            (Double(l), Double(r)) => Ok(Object::Bool(l >= r)),
+            _ => Err("Type mismatch for '>='".to_string()),
+        }
+    }
+
+    pub fn less(&self, other: &Object) -> Result<Object, String> {
+        use Object::*;
+        match (self, other) {
+            (Double(l), Double(r)) => Ok(Object::Bool(l < r)),
+            _ => Err("Type mismatch for '<'".to_string()),
+        }
+    }
+
+    pub fn less_equal(&self, other: &Object) -> Result<Object, String> {
+        use Object::*;
+        match (self, other) {
+            (Double(l), Double(r)) => Ok(Object::Bool(l <= r)),
+            _ => Err("Type mismatch for '<='".to_string()),
+        }
+    }
 }
 
 impl PartialEq for Object {

@@ -116,40 +116,21 @@ impl ExpressionVisitor<Object> for Interpreter {
     fn visit_binary(&mut self, data: &BinaryExpr) -> FoxResult<Object> {
         let left = self.evaluate(&data.left)?;
         let right = self.evaluate(&data.right)?;
-        use Object::*;
         use TokenType::*;
-        match (&data.operator.token_type, &left, &right) {
-            (Minus, Double(l), Double(r)) => Ok(Object::Double(l - r)),
-            (Slash, Double(l), Double(r)) => Ok(Object::Double(l / r)),
-            (Star, Double(l), Double(r)) => Ok(Object::Double(l * r)),
-            (Plus, Double(l), Double(r)) => Ok(Object::Double(l + r)),
-            (Plus, Text(l), Text(r)) => Ok(Object::Text(l.to_owned() + r)),
-
-            (Greater, Double(l), Double(r)) => Ok(Object::Bool(l > r)),
-            (GreaterEqual, Double(l), Double(r)) => Ok(Object::Bool(l >= r)),
-
-            (Less, Double(l), Double(r)) => Ok(Object::Bool(l < r)),
-            (LessEqual, Double(l), Double(r)) => Ok(Object::Bool(l <= r)),
-
-            (Minus, _, _)
-            | (Star, _, _)
-            | (Slash, _, _)
-            | (Greater, _, _)
-            | (GreaterEqual, _, _)
-            | (Less, _, _)
-            | (LessEqual, _, _) => Err(FoxError::token(
-                ErrorKind::OperandMustBeNumber,
-                Some(data.operator.clone()),
-            )),
-
+        let result = match (&data.operator.token_type, &left, &right) {
+            (Minus, l, r) => l.minus(r),
+            (Slash, l, r) => l.divide(r),
+            (Star, l, r) => l.multiply(r),
+            (Plus, l, r) => l.plus(r),
+            (Greater, l, r) => l.greater(r),
+            (GreaterEqual, l, r) => l.greater_equal(r),
+            (Less, l, r) => l.less(r),
+            (LessEqual, l, r) => l.less_equal(r),
             (BangEqual, l, r) => Ok(Object::Bool(l != r)),
             (EqualEqual, l, r) => Ok(Object::Bool(l == r)),
-
-            _ => Err(FoxError::token(
-                ErrorKind::OperandsMustBeSameType,
-                Some(data.operator.clone()),
-            )),
-        }
+            _ => Err("Type mismatch".to_string()),
+        };
+        result.map_err(|err| FoxError::runtime(Some(data.operator.clone()), &err))
     }
 
     fn visit_grouping(&mut self, data: &GroupingExpr) -> FoxResult<Object> {
@@ -406,5 +387,180 @@ impl StatementVisitor<()> for Interpreter {
 
 #[cfg(test)]
 mod test {
-    //
+    use super::*;
+
+    fn binary_expr(l: Object, t_type: TokenType, r: Object) -> BinaryExpr {
+        let left = Box::new(Expression::literal(l));
+        let right = Box::new(Expression::literal(r));
+        let operator = Token {
+            token_type: t_type,
+            lexeme: "Debug".to_string(),
+            literal: Object::Nil,
+            code_location: Default::default(),
+        };
+        BinaryExpr {
+            left,
+            operator,
+            right,
+        }
+    }
+
+    #[test]
+    fn test_binary_double_plus() {
+        let mut interpreter = Interpreter::new();
+        let expr = binary_expr(Object::Double(2.0), TokenType::Plus, Object::Double(2.0));
+        let obj = interpreter.visit_binary(&expr).unwrap();
+        assert_eq!(obj, Object::Double(4.0));
+        // err
+        let expr = binary_expr(Object::Double(3.0), TokenType::Plus, Object::Nil);
+        let res = interpreter.visit_binary(&expr);
+        assert!(res.is_err());
+    }
+
+    #[test]
+    fn test_binary_string_plus() {
+        let mut interpreter = Interpreter::new();
+        let expr = binary_expr(
+            Object::Text("hello,".to_string()),
+            TokenType::Plus,
+            Object::Text("fox lang".to_string()),
+        );
+        let obj = interpreter.visit_binary(&expr).unwrap();
+        assert_eq!(obj, Object::Text("hello,fox lang".to_string()));
+    }
+
+    #[test]
+    fn test_binary_double_minus() {
+        let mut interpreter = Interpreter::new();
+        let expr = binary_expr(Object::Double(3.0), TokenType::Minus, Object::Double(2.0));
+        let obj = interpreter.visit_binary(&expr).unwrap();
+        assert_eq!(obj, Object::Double(1.0));
+        // err
+        let expr = binary_expr(Object::Double(3.0), TokenType::Minus, Object::Nil);
+        let res = interpreter.visit_binary(&expr);
+        assert!(res.is_err());
+    }
+
+    #[test]
+    fn test_binary_double_multiply() {
+        let mut interpreter = Interpreter::new();
+        // ok
+        let expr = binary_expr(Object::Double(3.0), TokenType::Star, Object::Double(2.0));
+        let result = interpreter.visit_binary(&expr);
+        assert!(result.is_ok());
+        let obj = result.unwrap();
+        assert_eq!(obj, Object::Double(6.0));
+        // err
+        let expr = binary_expr(Object::Double(3.0), TokenType::Star, Object::Nil);
+        let result = interpreter.visit_binary(&expr);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_binary_double_greater() {
+        let mut interpreter = Interpreter::new();
+        // true
+        let expr = binary_expr(Object::Double(3.0), TokenType::Greater, Object::Double(2.0));
+        let obj = interpreter.visit_binary(&expr).unwrap();
+        assert_eq!(obj, Object::Bool(true));
+        // false
+        let expr = binary_expr(Object::Double(3.0), TokenType::Greater, Object::Double(3.0));
+        let obj = interpreter.visit_binary(&expr).unwrap();
+        assert_eq!(obj, Object::Bool(false));
+        // false
+        let expr = binary_expr(Object::Double(3.0), TokenType::Greater, Object::Double(4.0));
+        let obj = interpreter.visit_binary(&expr).unwrap();
+        assert_eq!(obj, Object::Bool(false));
+        // err
+        let expr = binary_expr(Object::Double(3.0), TokenType::Greater, Object::Nil);
+        let result = interpreter.visit_binary(&expr);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_binary_double_greater_equal() {
+        let mut interpreter = Interpreter::new();
+        // true
+        let expr = binary_expr(
+            Object::Double(3.0),
+            TokenType::GreaterEqual,
+            Object::Double(2.0),
+        );
+        let obj = interpreter.visit_binary(&expr).unwrap();
+        assert_eq!(obj, Object::Bool(true));
+        // true
+        let expr = binary_expr(
+            Object::Double(3.0),
+            TokenType::GreaterEqual,
+            Object::Double(3.0),
+        );
+        let obj = interpreter.visit_binary(&expr).unwrap();
+        assert_eq!(obj, Object::Bool(true));
+        // false
+        let expr = binary_expr(
+            Object::Double(3.0),
+            TokenType::GreaterEqual,
+            Object::Double(4.0),
+        );
+        let obj = interpreter.visit_binary(&expr).unwrap();
+        assert_eq!(obj, Object::Bool(false));
+        // err
+        let expr = binary_expr(Object::Double(3.0), TokenType::GreaterEqual, Object::Nil);
+        let result = interpreter.visit_binary(&expr);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_binary_double_less() {
+        let mut interpreter = Interpreter::new();
+        // true
+        let expr = binary_expr(Object::Double(3.0), TokenType::Less, Object::Double(4.0));
+        let obj = interpreter.visit_binary(&expr).unwrap();
+        assert_eq!(obj, Object::Bool(true));
+        // false
+        let expr = binary_expr(Object::Double(3.0), TokenType::Less, Object::Double(3.0));
+        let obj = interpreter.visit_binary(&expr).unwrap();
+        assert_eq!(obj, Object::Bool(false));
+        // false
+        let expr = binary_expr(Object::Double(3.0), TokenType::Less, Object::Double(2.0));
+        let obj = interpreter.visit_binary(&expr).unwrap();
+        assert_eq!(obj, Object::Bool(false));
+        // err
+        let expr = binary_expr(Object::Double(3.0), TokenType::Less, Object::Nil);
+        let result = interpreter.visit_binary(&expr);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_binary_double_less_equal() {
+        let mut interpreter = Interpreter::new();
+        // true
+        let expr = binary_expr(
+            Object::Double(3.0),
+            TokenType::LessEqual,
+            Object::Double(4.0),
+        );
+        let obj = interpreter.visit_binary(&expr).unwrap();
+        assert_eq!(obj, Object::Bool(true));
+        // true
+        let expr = binary_expr(
+            Object::Double(3.0),
+            TokenType::LessEqual,
+            Object::Double(3.0),
+        );
+        let obj = interpreter.visit_binary(&expr).unwrap();
+        assert_eq!(obj, Object::Bool(true));
+        // false
+        let expr = binary_expr(
+            Object::Double(3.0),
+            TokenType::LessEqual,
+            Object::Double(2.0),
+        );
+        let obj = interpreter.visit_binary(&expr).unwrap();
+        assert_eq!(obj, Object::Bool(false));
+        // err
+        let expr = binary_expr(Object::Double(3.0), TokenType::LessEqual, Object::Nil);
+        let result = interpreter.visit_binary(&expr);
+        assert!(result.is_err());
+    }
 }
