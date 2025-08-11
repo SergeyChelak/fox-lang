@@ -77,7 +77,7 @@ impl Environment {
             enclosing.borrow().values.get(name).cloned()
         };
         let Some(obj) = value else {
-            let err = FoxError::resolver(None, "Object not found");
+            let err = FoxError::bug("Object not found");
             return Err(err);
         };
         Ok(obj)
@@ -108,7 +108,7 @@ impl Environment {
         let mut ptr = self.enclosing.clone();
         for _ in 1..depth {
             let Some(current) = ptr else {
-                let err = FoxError::resolver(None, "Invalid depth: Ancestor environment not found");
+                let err = FoxError::bug("Invalid depth: Ancestor environment not found");
                 return Err(err);
             };
             ptr = current.borrow().enclosing.clone();
